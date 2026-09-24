@@ -3,424 +3,583 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <title>SMA MAP ROAD</title>
+<title>SMA MAP ROAD</title>
 
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
 
-    <!-- =========================================
-         LEAFLET CSS
-         ========================================= -->
+<style>
 
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    >
+* {
+    box-sizing: border-box;
+}
 
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f5f7;
+    color: #1f2937;
+}
 
-    <style>
+header {
+    background: #142f44;
+    color: white;
+    padding: 14px 20px;
+}
 
-        /* =========================================
-           ОСНОВНЫЕ СТИЛИ
-           ========================================= */
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
 
-        body {
+header p {
+    margin: 5px 0 0;
+    color: #cdd9e3;
+}
 
-            margin: 0;
 
-            font-family:
-                Arial,
-                sans-serif;
+/* ===========================
+   ВЕРХНЯЯ СТАТИСТИКА
+=========================== */
 
-            background:
-                #f5f7fa;
+#topbar {
 
-        }
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 
+    padding: 10px 20px;
 
-        header {
+    background: white;
 
-            background:
-                #142f44;
+    border-bottom: 1px solid #ddd;
+}
 
-            color:
-                white;
+.stat {
 
-            padding:
-                15px 20px;
+    padding: 8px 12px;
 
-        }
+    background: #eef2f6;
 
+    border-radius: 8px;
 
-        header h1 {
+    font-weight: bold;
+}
 
-            margin:
-                0;
+.stat span {
+    color: #126caa;
+}
 
-            font-size:
-                24px;
+#syncStatus {
 
-        }
+    margin-left: auto;
 
+    font-size: 13px;
 
-        header p {
+    font-weight: bold;
+}
 
-            margin:
-                5px 0 0;
 
-            color:
-                #d6e2eb;
+/* ===========================
+   ОСНОВНОЙ LAYOUT
+=========================== */
 
-        }
+.layout {
 
+    display: grid;
 
+    grid-template-columns:
+        360px 1fr;
 
-        /* =========================================
-           СТАТИСТИКА
-           ========================================= */
+    height:
+        calc(100vh - 125px);
+}
 
-        #stats {
 
-            display:
-                flex;
+/* ===========================
+   ЛЕВАЯ ПАНЕЛЬ
+=========================== */
 
-            gap:
-                25px;
+.sidebar {
 
-            flex-wrap:
-                wrap;
+    display: flex;
 
-            padding:
-                12px 20px;
+    flex-direction: column;
 
-            background:
-                white;
+    background: white;
 
-            border-bottom:
-                1px solid #ddd;
+    border-right: 1px solid #ddd;
 
-            font-weight:
-                bold;
+    overflow: hidden;
+}
 
-        }
+.sidebar-controls {
 
+    padding: 12px;
 
-        .stat {
+    border-bottom: 1px solid #ddd;
+}
 
-            display:
-                flex;
+input,
+select,
+textarea {
 
-            gap:
-                5px;
+    width: 100%;
 
-        }
+    padding: 10px;
 
+    border: 1px solid #cbd5e1;
 
-        .stat-number {
+    border-radius: 6px;
 
-            color:
-                #126caa;
+    font-size: 14px;
 
-        }
+    font-family: Arial, sans-serif;
+}
 
+.gap {
+    margin-top: 8px;
+}
 
+#stopList {
 
-        /* =========================================
-           КАРТА
-           ========================================= */
+    flex: 1;
 
-        #map {
+    overflow-y: auto;
+}
 
-            width:
-                100%;
 
-            height:
-                70vh;
+/* ===========================
+   КАРТОЧКИ В СПИСКЕ
+=========================== */
 
-            min-height:
-                500px;
+.stop-item {
 
-        }
+    display: block;
 
+    width: 100%;
 
+    padding: 12px;
 
-        /* =========================================
-           ЦИФРА ВОЗЛЕ МАРКЕРА
-           ========================================= */
+    border: none;
 
-        .route-count-label {
+    border-bottom: 1px solid #eee;
 
-            background:
-                white;
+    background: white;
 
-            border:
-                2px solid #333;
+    text-align: left;
 
-            border-radius:
-                20px;
+    cursor: pointer;
+}
 
-            font-size:
-                14px;
+.stop-item:hover {
+    background: #f5f7fa;
+}
 
-            font-weight:
-                bold;
+.stop-item.active {
 
-            padding:
-                3px 8px;
+    background: #e9f3fb;
 
-            color:
-                #111;
+    border-left: 5px solid #126caa;
+}
 
-            box-shadow:
-                0 2px 5px
-                rgba(0,0,0,0.3);
+.stop-name {
 
-        }
+    font-weight: bold;
 
+    margin-bottom: 5px;
+}
 
+.stop-routes {
 
-        /* =========================================
-           ПАНЕЛЬ ПРОВЕРКИ
-           ========================================= */
+    font-size: 12px;
 
-        #reviewPanel {
+    color: #64748b;
+}
 
-            padding:
-                20px;
 
-        }
+/* ===========================
+   СТАТУСЫ
+=========================== */
 
+.status {
 
-        #reviewPanel h2 {
+    display: inline-block;
 
-            margin-top:
-                0;
+    margin-top: 7px;
 
-        }
+    padding: 4px 8px;
 
+    border-radius: 12px;
 
-        #reviewPanel p {
+    font-size: 11px;
 
-            color:
-                #555;
+    font-weight: bold;
+}
 
-        }
+.status-source {
 
+    background: #dceeff;
 
+    color: #075985;
+}
 
-        /* =========================================
-           ТАБЛИЦА
-           ========================================= */
+.status-verified {
 
-        .table-wrapper {
+    background: #d9f5df;
 
-            overflow-x:
-                auto;
+    color: #146c2e;
+}
 
-        }
+.status-pending {
 
+    background: #eee9f6;
 
-        #reviewTable {
+    color: #5b5170;
+}
 
-            width:
-                100%;
+.status-problem {
 
-            border-collapse:
-                collapse;
+    background: #ffe1e1;
 
-            background:
-                white;
+    color: #9a2424;
+}
 
-            min-width:
-                1000px;
 
-        }
+/* ===========================
+   ПРАВАЯ ЧАСТЬ
+=========================== */
 
+.main {
 
-        #reviewTable th,
-        #reviewTable td {
+    display: grid;
 
-            border:
-                1px solid #ddd;
+    grid-template-rows:
+        minmax(400px, 1fr)
+        auto;
 
-            padding:
-                10px;
+    overflow: hidden;
+}
 
-            text-align:
-                left;
+#map {
 
-            vertical-align:
-                top;
+    width: 100%;
 
-            font-size:
-                13px;
+    height: 100%;
+}
 
-        }
 
+/* ===========================
+   НИЖНЯЯ ПАНЕЛЬ
+=========================== */
 
-        #reviewTable th {
+.verification-panel {
 
-            background:
-                #202b38;
+    background: white;
 
-            color:
-                white;
+    border-top: 1px solid #ddd;
 
-        }
+    padding: 15px 18px;
 
+    max-height: 47vh;
 
+    overflow-y: auto;
+}
 
-        /* =========================================
-           СТАТУСЫ СТРОК
-           ========================================= */
+.panel-header {
 
-        .review-wait {
+    display: flex;
 
-            background:
-                #fff8df;
+    justify-content: space-between;
 
-        }
+    align-items: center;
 
+    gap: 15px;
+}
 
-        .review-ok {
+.panel-header h2 {
+    margin: 0 0 5px;
+}
 
-            background:
-                #e9f8ed;
+#currentStatus {
+    font-weight: bold;
+}
 
-        }
 
+/* ===========================
+   ИНФОРМАЦИЯ
+=========================== */
 
-        .review-bad {
+.info-grid {
 
-            background:
-                #ffeaea;
+    display: grid;
 
-        }
+    grid-template-columns:
+        repeat(3, 1fr);
 
+    gap: 10px;
 
+    margin-top: 12px;
+}
 
-        /* =========================================
-           КНОПКИ
-           ========================================= */
+.info-box {
 
-        button {
+    padding: 10px;
 
-            cursor:
-                pointer;
+    background: #f4f6f8;
 
-            border:
-                none;
+    border-radius: 7px;
+}
 
-            border-radius:
-                5px;
+.info-title {
 
-            padding:
-                7px 10px;
+    margin-bottom: 4px;
 
-        }
+    font-size: 11px;
 
+    color: #64748b;
+}
 
-        .btn-confirm {
 
-            background:
-                #198754;
+/* ===========================
+   КООРДИНАТЫ
+=========================== */
 
-            color:
-                white;
+.coordinate-row {
 
-            margin-right:
-                5px;
+    display: grid;
 
-        }
+    grid-template-columns:
+        1fr 150px;
 
+    gap: 10px;
 
-        .btn-reject {
+    margin-top: 12px;
+}
 
-            background:
-                #dc3545;
+.reviewer-row {
 
-            color:
-                white;
+    display: grid;
 
-        }
+    grid-template-columns:
+        1fr 1fr;
 
+    gap: 10px;
 
-        .btn-show {
+    margin-top: 10px;
+}
 
-            background:
-                #126caa;
 
-            color:
-                white;
+/* ===========================
+   СРАВНЕНИЕ КООРДИНАТ
+=========================== */
 
-            margin-top:
-                7px;
+#compareInfo {
 
-        }
+    display: none;
 
+    margin-top: 9px;
 
+    padding: 10px 12px;
 
-        /* =========================================
-           ССЫЛКА
-           ========================================= */
+    border-radius: 7px;
 
-        .review-link {
+    font-weight: bold;
 
-            color:
-                #126caa;
+    line-height: 1.5;
+}
 
-            font-weight:
-                bold;
 
-            text-decoration:
-                none;
+/* ===========================
+   КНОПКИ
+=========================== */
 
-        }
+.actions {
 
+    display: flex;
 
-        .review-link:hover {
+    gap: 10px;
 
-            text-decoration:
-                underline;
+    flex-wrap: wrap;
 
-        }
+    margin-top: 12px;
+}
 
+button {
 
+    border: none;
 
-        /* =========================================
-           MOBILE
-           ========================================= */
+    border-radius: 6px;
 
-        @media (
-            max-width: 700px
-        ) {
+    padding: 10px 14px;
 
-            #map {
+    cursor: pointer;
 
-                height:
-                    60vh;
+    font-weight: bold;
+}
 
-            }
+button:disabled {
 
-        }
+    opacity: 0.5;
 
-    </style>
+    cursor: not-allowed;
+}
+
+.btn-blue {
+    background: #126caa;
+    color: white;
+}
+
+.btn-green {
+    background: #198754;
+    color: white;
+}
+
+.btn-red {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-dark {
+    background: #1f2937;
+    color: white;
+}
+
+.btn-gray {
+    background: #e5e7eb;
+}
+
+
+/* ===========================
+   2ГИС
+=========================== */
+
+.source-link {
+
+    display: inline-block;
+
+    padding: 10px 13px;
+
+    background: #126caa;
+
+    color: white;
+
+    border-radius: 6px;
+
+    text-decoration: none;
+
+    font-weight: bold;
+
+    white-space: nowrap;
+}
+
+
+/* ===========================
+   СООБЩЕНИЯ
+=========================== */
+
+.message {
+
+    display: none;
+
+    margin-top: 10px;
+
+    padding: 10px;
+
+    border-radius: 6px;
+}
+
+.message.ok {
+
+    display: block;
+
+    background: #dff6e4;
+
+    color: #146c2e;
+}
+
+.message.error {
+
+    display: block;
+
+    background: #ffe0e0;
+
+    color: #9a2424;
+}
+
+
+/* ===========================
+   ЦИФРА МАРШРУТОВ НА ТОЧКЕ
+=========================== */
+
+.route-count-label {
+
+    background: white;
+
+    border: 2px solid #333;
+
+    border-radius: 18px;
+
+    padding: 2px 7px;
+
+    font-weight: bold;
+}
+
+
+/* ===========================
+   MOBILE
+=========================== */
+
+@media (max-width: 900px) {
+
+    .layout {
+
+        grid-template-columns: 1fr;
+
+        height: auto;
+    }
+
+    .sidebar {
+        height: 350px;
+    }
+
+    .main {
+        height: 900px;
+    }
+
+    .info-grid,
+    .coordinate-row,
+    .reviewer-row {
+
+        grid-template-columns: 1fr;
+    }
+
+    #syncStatus {
+
+        width: 100%;
+
+        margin-left: 0;
+    }
+
+}
+
+</style>
 
 </head>
 
 
-
 <body>
 
-
-<!-- =========================================
-     HEADER
-     ========================================= -->
 
 <header>
 
@@ -429,27 +588,23 @@
     </h1>
 
     <p>
-        Карта отстоев общественного транспорта Алматы
+        Проверка отстоев Алматы
     </p>
 
 </header>
 
 
-
-<!-- =========================================
+<!-- ===========================
      СТАТИСТИКА
-     ========================================= -->
+=========================== -->
 
-<div id="stats">
+<div id="topbar">
 
     <div class="stat">
 
-        Проверенные:
+        Всего:
 
-        <span
-            id="verifiedCount"
-            class="stat-number"
-        >
+        <span id="totalCount">
             0
         </span>
 
@@ -458,12 +613,9 @@
 
     <div class="stat">
 
-        Автоматически найденные:
+        🟢 Проверено:
 
-        <span
-            id="autoCount"
-            class="stat-number"
-        >
+        <span id="verifiedCount">
             0
         </span>
 
@@ -472,14 +624,48 @@
 
     <div class="stat">
 
-        Ожидают проверки:
+        🔵 Есть координата:
 
-        <span
-            id="reviewCount"
-            class="stat-number"
-        >
+        <span id="sourceCount">
             0
         </span>
+
+    </div>
+
+
+    <div class="stat">
+
+        ⚪ Без координат:
+
+        <span id="pendingCount">
+            0
+        </span>
+
+    </div>
+
+
+    <div class="stat">
+
+        🔴 Проблема:
+
+        <span id="problemCount">
+            0
+        </span>
+
+    </div>
+
+
+    <button
+        id="refreshButton"
+        class="btn-gray"
+    >
+        ↻ Обновить
+    </button>
+
+
+    <div id="syncStatus">
+
+        Подключение...
 
     </div>
 
@@ -487,120 +673,275 @@
 
 
 
-<!-- =========================================
-     КАРТА
-     ========================================= -->
-
-<div id="map"></div>
+<div class="layout">
 
 
+<!-- ===========================
+     ЛЕВАЯ ПАНЕЛЬ
+=========================== -->
 
-<!-- =========================================
-     ПАНЕЛЬ ПРОВЕРКИ
-     ========================================= -->
-
-<div id="reviewPanel">
-
-    <h2>
-        Проверка найденных отстоев
-    </h2>
+<aside class="sidebar">
 
 
-    <p>
-
-        Оранжевые точки определены автоматически.
-
-        Открой 2ГИС,
-
-        затем нажми «Показать»,
-
-        сравни две точки
-
-        и выбери ✓ или ✕.
-
-    </p>
+    <div class="sidebar-controls">
 
 
-    <div class="table-wrapper">
-
-        <table id="reviewTable">
-
-            <thead>
-
-                <tr>
-
-                    <th>
-                        Наше название
-                    </th>
-
-                    <th>
-                        Что нашёл геокодер
-                    </th>
-
-                    <th>
-                        Точность
-                    </th>
-
-                    <th>
-                        Координаты
-                    </th>
-
-                    <th>
-                        Маршруты
-                    </th>
-
-                    <th>
-                        Проверка
-                    </th>
-
-                    <th>
-                        Решение
-                    </th>
-
-                </tr>
-
-            </thead>
+        <input
+            id="searchInput"
+            placeholder="Маршрут, отстой или автопарк"
+        >
 
 
-            <tbody id="reviewBody">
+        <select
+            id="statusFilter"
+            class="gap"
+        >
 
-            </tbody>
+            <option value="ALL">
+                Все
+            </option>
 
-        </table>
+            <option value="ПРОВЕРЕНО">
+                🟢 Проверено
+            </option>
+
+            <option value="ЕСТЬ КООРДИНАТА">
+                🔵 Есть координата
+            </option>
+
+            <option value="НЕ ПРОВЕРЕНО">
+                ⚪ Без координат
+            </option>
+
+            <option value="ПРОБЛЕМА">
+                🔴 Проблема
+            </option>
+
+        </select>
+
+
+        <button
+            id="nextButton"
+            class="btn-dark gap"
+            style="width:100%"
+        >
+            Следующий на проверку →
+        </button>
+
 
     </div>
+
+
+    <div id="stopList">
+    </div>
+
+
+</aside>
+
+
+
+<!-- ===========================
+     ПРАВАЯ ЧАСТЬ
+=========================== -->
+
+<main class="main">
+
+
+    <div id="map">
+    </div>
+
+
+
+    <section class="verification-panel">
+
+
+        <div class="panel-header">
+
+
+            <div>
+
+                <h2 id="currentName">
+                    Выберите отстой
+                </h2>
+
+                <div id="currentStatus">
+                    —
+                </div>
+
+            </div>
+
+
+            <a
+                id="sourceLink"
+                class="source-link"
+                href="#"
+                target="_blank"
+                rel="noopener"
+            >
+                🌐 Открыть 2ГИС
+            </a>
+
+
+        </div>
+
+
+
+        <div class="info-grid">
+
+
+            <div class="info-box">
+
+                <div class="info-title">
+                    Маршруты
+                </div>
+
+                <div id="currentRoutes">
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <div class="info-title">
+                    Автопарк
+                </div>
+
+                <div id="currentParks">
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <div class="info-title">
+                    Последняя проверка
+                </div>
+
+                <div id="lastCheck">
+                    —
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <div class="coordinate-row">
+
+
+            <input
+                id="coordinateInput"
+                placeholder="Вставь координаты или полный URL 2ГИС"
+            >
+
+
+            <button
+                id="showButton"
+                class="btn-blue"
+            >
+                📍 Показать
+            </button>
+
+
+        </div>
+
+
+
+        <div id="compareInfo">
+        </div>
+
+
+
+        <div class="reviewer-row">
+
+
+            <input
+                id="reviewerInput"
+                placeholder="Кто проверяет?"
+            >
+
+
+            <input
+                id="noteInput"
+                placeholder="Примечание"
+            >
+
+
+        </div>
+
+
+
+        <div class="actions">
+
+
+            <button
+                id="confirmButton"
+                class="btn-green"
+            >
+                ✅ Подтвердить
+            </button>
+
+
+            <button
+                id="problemButton"
+                class="btn-red"
+            >
+                ❌ Проблема
+            </button>
+
+
+        </div>
+
+
+
+        <div
+            id="message"
+            class="message"
+        >
+        </div>
+
+
+    </section>
+
+
+</main>
+
 
 </div>
 
 
-
-<!-- =========================================
-     LEAFLET
-     ========================================= -->
 
 <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
 </script>
 
-
-
-<!-- =========================================
-     НАША БАЗА ОТСТОЕВ
-     ========================================= -->
-
 <script src="stops.js"></script>
-
 
 
 <script>
 
 
 // ============================================================
-// 1. СОЗДАЕМ КАРТУ
+// GOOGLE APPS SCRIPT API
 // ============================================================
 
+const API_URL =
+    "https://script.google.com/macros/s/AKfycbxUb1Q2kPAQOTewzBmvnszc_EmLAQ0pLEsNYb1NAxTkcOrESwhNWtSH-uIatxIkGE5j/exec";
+
+
+
+// ============================================================
+// КАРТА
+// ============================================================
 
 const map =
+
     L.map("map").setView(
 
         [
@@ -614,22 +955,15 @@ const map =
 
 
 
-// ============================================================
-// 2. ФОН КАРТЫ
-// ============================================================
-
-
 L.tileLayer(
 
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
 
     {
 
-        maxZoom:
-            19,
+        maxZoom: 19,
 
-        attribution:
-            "Esri"
+        attribution: "Esri"
 
     }
 
@@ -638,24 +972,24 @@ L.tileLayer(
 
 
 // ============================================================
-// 3. СОЗДАЕМ СЛОИ
+// СЛОИ
 // ============================================================
+
+const sourceLayer =
+    L.layerGroup().addTo(map);
 
 
 const verifiedLayer =
-    L.layerGroup()
-    .addTo(map);
+    L.layerGroup().addTo(map);
 
 
-const autoLayer =
-    L.layerGroup()
-    .addTo(map);
+const problemLayer =
+    L.layerGroup().addTo(map);
 
 
+const candidateLayer =
+    L.layerGroup().addTo(map);
 
-// ============================================================
-// 4. ПЕРЕКЛЮЧАТЕЛЬ СЛОЕВ
-// ============================================================
 
 
 L.control.layers(
@@ -664,11 +998,17 @@ L.control.layers(
 
     {
 
-        "✓ Проверенные отстои":
+        "🔵 Старые координаты":
+            sourceLayer,
+
+        "🟢 Проверенные":
             verifiedLayer,
 
-        "⚠ Требуют проверки":
-            autoLayer
+        "🔴 Проблемные":
+            problemLayer,
+
+        "🟠 Новая точка":
+            candidateLayer
 
     }
 
@@ -677,71 +1017,611 @@ L.control.layers(
 
 
 // ============================================================
-// 5. МАССИВ ДЛЯ ТАБЛИЦЫ ПРОВЕРКИ
+// ДАННЫЕ
 // ============================================================
 
+let records =
+    new Map();
 
-const reviewItems = [];
+
+let activeStop =
+    null;
+
+
+let candidate =
+    null;
+
+
+let saving =
+    false;
 
 
 
 // ============================================================
-// 6. ХРАНИМ АВТОМАТИЧЕСКИЕ МАРКЕРЫ
+// ПРОВЕРКА СТАРЫХ КООРДИНАТ STOPS.JS
 // ============================================================
 
+function hasSourceCoordinates(stop) {
 
-const candidateMarkers = {};
+    return (
 
+        stop.lat !== null &&
+        stop.lon !== null &&
 
+        Number.isFinite(
+            Number(stop.lat)
+        ) &&
 
-// ============================================================
-// 7. КЛЮЧ ДЛЯ LOCALSTORAGE
-// ============================================================
+        Number.isFinite(
+            Number(stop.lon)
+        )
 
-
-function getStopKey(stop) {
-
-
-    if (stop.url) {
-
-        return stop.url;
-
-    }
-
-
-    return stop.name;
-
+    );
 }
 
 
 
 // ============================================================
-// 8. СТАТИСТИКА
+// ВАЛИДАЦИЯ КООРДИНАТ
 // ============================================================
 
+function validCoordinates(
+    lat,
+    lon
+) {
 
-function updateStats() {
+    return (
 
+        Number.isFinite(lat) &&
+        Number.isFinite(lon) &&
+
+        lat >= 42 &&
+        lat <= 45 &&
+
+        lon >= 75 &&
+        lon <= 80
+
+    );
+}
+
+
+
+// ============================================================
+// ID ОТСТОЯ
+// ============================================================
+
+function makeStopId(
+    stop,
+    index
+) {
+
+    if (stop.url) {
+
+        const match =
+
+            stop.url.match(
+
+                /go\.2gis\.com\/([^/?#]+)/i
+
+            );
+
+
+        if (match) {
+
+            return (
+                "2GIS-" +
+                match[1]
+            );
+        }
+    }
+
+
+    const text =
+
+        [
+
+            stop.url || "",
+
+            stop.name || "",
+
+            (
+                stop.routes ||
+                []
+            ).join(","),
+
+            index
+
+        ].join("|");
+
+
+    let hash =
+        2166136261;
+
+
+    for (
+        let i = 0;
+        i < text.length;
+        i++
+    ) {
+
+        hash ^=
+            text.charCodeAt(i);
+
+
+        hash =
+            Math.imul(
+
+                hash,
+                16777619
+
+            );
+    }
+
+
+    return (
+
+        "STOP-" +
+
+        (
+            hash >>> 0
+        ).toString(16)
+
+    );
+}
+
+
+
+// ============================================================
+// НОРМАЛИЗАЦИЯ STOPS.JS
+// ============================================================
+
+const allStops =
+
+    stops.map(
+
+        function(
+            stop,
+            index
+        ) {
+
+            return {
+
+                ...stop,
+
+                id:
+                    makeStopId(
+                        stop,
+                        index
+                    ),
+
+                index:
+                    index
+
+            };
+
+        }
+
+    );
+
+
+
+// ============================================================
+// ПОЛУЧИТЬ ЗАПИСЬ
+// ============================================================
+
+function getRecord(stop) {
+
+    return (
+        records.get(
+            stop.id
+        ) || null
+    );
+}
+
+
+
+// ============================================================
+// ПОЛУЧИТЬ ТЕКУЩУЮ ИЗВЕСТНУЮ КООРДИНАТУ
+//
+// ПРИОРИТЕТ:
+// 1. GOOGLE SHEETS
+// 2. STOPS.JS
+// ============================================================
+
+function getExistingCoordinates(stop) {
+
+    const record =
+        getRecord(stop);
+
+
+    if (
+        record &&
+        validCoordinates(
+
+            Number(record.lat),
+            Number(record.lon)
+
+        )
+    ) {
+
+        return {
+
+            lat:
+                Number(record.lat),
+
+            lon:
+                Number(record.lon),
+
+            source:
+                "record"
+
+        };
+    }
+
+
+    if (
+        hasSourceCoordinates(stop)
+    ) {
+
+        return {
+
+            lat:
+                Number(stop.lat),
+
+            lon:
+                Number(stop.lon),
+
+            source:
+                "stops"
+
+        };
+    }
+
+
+    return null;
+}
+
+
+
+// ============================================================
+// СТАТУС
+// ============================================================
+
+function getStatus(stop) {
+
+    const record =
+        getRecord(stop);
+
+
+    if (
+        record &&
+        record.status === "ПРОВЕРЕНО"
+    ) {
+
+        return "ПРОВЕРЕНО";
+    }
+
+
+    if (
+        record &&
+        record.status === "ПРОБЛЕМА"
+    ) {
+
+        return "ПРОБЛЕМА";
+    }
+
+
+    if (
+        hasSourceCoordinates(stop)
+    ) {
+
+        return "ЕСТЬ КООРДИНАТА";
+    }
+
+
+    return "НЕ ПРОВЕРЕНО";
+}
+
+
+
+// ============================================================
+// ЗАГРУЗКА GOOGLE SHEETS
+// ============================================================
+
+async function loadRecords() {
+
+    setSyncStatus(
+        "Синхронизация..."
+    );
+
+
+    try {
+
+        const response =
+
+            await fetch(
+
+                API_URL +
+
+                "?action=list&t=" +
+
+                Date.now(),
+
+                {
+                    cache:
+                        "no-store"
+                }
+
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.ok) {
+
+            throw new Error(
+
+                data.error ||
+                "Ошибка API"
+
+            );
+        }
+
+
+        records =
+            new Map();
+
+
+        (
+            data.records ||
+            []
+        ).forEach(
+
+            function(record) {
+
+                records.set(
+
+                    String(record.id),
+
+                    record
+
+                );
+
+            }
+
+        );
+
+
+        renderEverything();
+
+
+        setSyncStatus(
+            "● Синхронизировано"
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+
+        setSyncStatus(
+            "⚠ Нет связи"
+        );
+
+
+        showMessage(
+
+            "Ошибка подключения: " +
+            error.message,
+
+            "error"
+
+        );
+    }
+}
+
+
+
+// ============================================================
+// СОХРАНЕНИЕ
+// ============================================================
+
+async function sendRecord(record) {
+
+    if (saving) {
+        return;
+    }
+
+
+    saving = true;
+
+
+    setButtonsDisabled(
+        true
+    );
+
+
+    setSyncStatus(
+        "Сохранение..."
+    );
+
+
+    try {
+
+        const response =
+
+            await fetch(
+
+                API_URL,
+
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "text/plain;charset=utf-8"
+
+                    },
+
+                    body:
+
+                        JSON.stringify({
+
+                            action:
+                                "save",
+
+                            record:
+                                record
+
+                        })
+
+                }
+
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!data.ok) {
+
+            throw new Error(
+
+                data.error ||
+                "Ошибка сохранения"
+
+            );
+        }
+
+
+        records.set(
+
+            String(
+                data.record.id
+            ),
+
+            data.record
+
+        );
+
+
+        setSyncStatus(
+            "● Сохранено"
+        );
+
+
+        return data.record;
+
+    }
+
+    finally {
+
+        saving = false;
+
+
+        setButtonsDisabled(
+            false
+        );
+    }
+}
+
+
+
+// ============================================================
+// КНОПКИ
+// ============================================================
+
+function setButtonsDisabled(value) {
+
+    document
+        .getElementById(
+            "confirmButton"
+        )
+        .disabled =
+            value;
+
+
+    document
+        .getElementById(
+            "problemButton"
+        )
+        .disabled =
+            value;
+}
+
+
+
+// ============================================================
+// SYNC
+// ============================================================
+
+function setSyncStatus(text) {
+
+    document
+        .getElementById(
+            "syncStatus"
+        )
+        .textContent =
+            text;
+}
+
+
+
+// ============================================================
+// СТАТИСТИКА
+// ============================================================
+
+function renderStats() {
 
     let verified = 0;
+    let source = 0;
+    let pending = 0;
+    let problem = 0;
 
 
-
-    stops.forEach(
+    allStops.forEach(
 
         function(stop) {
 
+            const status =
+                getStatus(stop);
+
 
             if (
-
-                stop.lat !== null &&
-                stop.lon !== null
-
+                status === "ПРОВЕРЕНО"
             ) {
-
 
                 verified++;
 
+            }
+
+            else if (
+                status === "ЕСТЬ КООРДИНАТА"
+            ) {
+
+                source++;
+
+            }
+
+            else if (
+                status === "ПРОБЛЕМА"
+            ) {
+
+                problem++;
+
+            }
+
+            else {
+
+                pending++;
 
             }
 
@@ -749,6 +1629,13 @@ function updateStats() {
 
     );
 
+
+    document
+        .getElementById(
+            "totalCount"
+        )
+        .textContent =
+            allStops.length;
 
 
     document
@@ -759,1551 +1646,2054 @@ function updateStats() {
             verified;
 
 
-
     document
         .getElementById(
-            "autoCount"
+            "sourceCount"
         )
         .textContent =
-
-            Object.keys(
-                candidateMarkers
-            ).length;
-
-
-
-    const waiting =
-
-        reviewItems.filter(
-
-            function(item) {
-
-                return (
-                    item.status ===
-                    "waiting"
-                );
-
-            }
-
-        ).length;
-
+            source;
 
 
     document
         .getElementById(
-            "reviewCount"
+            "pendingCount"
         )
         .textContent =
-            waiting;
+            pending;
 
+
+    document
+        .getElementById(
+            "problemCount"
+        )
+        .textContent =
+            problem;
 }
 
 
 
 // ============================================================
-// 9. РИСУЕМ ОДИН ОТСТОЙ
+// СПИСОК
 // ============================================================
 
+function renderStopList() {
 
-function drawStop(
-    stop,
-    isAuto = false
-) {
+    const list =
 
-
-    let marker;
-
+        document.getElementById(
+            "stopList"
+        );
 
 
-    // ========================================================
-    // АВТОМАТИЧЕСКАЯ ТОЧКА
-    // ========================================================
+    list.innerHTML = "";
 
 
-    if (isAuto) {
+    const search =
+
+        document
+            .getElementById(
+                "searchInput"
+            )
+            .value
+            .trim()
+            .toLowerCase();
 
 
-        marker =
+    const filter =
 
-            L.circleMarker(
+        document
+            .getElementById(
+                "statusFilter"
+            )
+            .value;
 
-                [
-                    stop.lat,
-                    stop.lon
-                ],
 
-                {
+    const filtered =
 
-                    radius:
-                        9,
+        allStops.filter(
 
-                    color:
-                        "#ffffff",
+            function(stop) {
 
-                    weight:
-                        2,
+                const status =
+                    getStatus(stop);
 
-                    fillColor:
-                        "#ff8c00",
 
-                    fillOpacity:
-                        1
+                if (
+                    filter !== "ALL" &&
+                    status !== filter
+                ) {
 
+                    return false;
                 }
 
-            )
-            .addTo(
-                autoLayer
-            );
+
+                if (!search) {
+                    return true;
+                }
 
 
+                const text =
+
+                    [
+
+                        stop.name || "",
+
+                        (
+                            stop.routes ||
+                            []
+                        ).join(" "),
+
+                        (
+                            stop.parks ||
+                            []
+                        ).join(" ")
+
+                    ]
+
+                    .join(" ")
+                    .toLowerCase();
+
+
+                return (
+                    text.includes(search)
+                );
+            }
+
+        );
+
+
+    filtered.forEach(
+
+        function(stop) {
+
+            const button =
+
+                document.createElement(
+                    "button"
+                );
+
+
+            button.className =
+                "stop-item";
+
+
+            if (
+                activeStop &&
+                activeStop.id === stop.id
+            ) {
+
+                button.classList.add(
+                    "active"
+                );
+            }
+
+
+            const name =
+
+                document.createElement(
+                    "div"
+                );
+
+
+            name.className =
+                "stop-name";
+
+
+            name.textContent =
+                stop.name;
+
+
+            const routes =
+
+                document.createElement(
+                    "div"
+                );
+
+
+            routes.className =
+                "stop-routes";
+
+
+            routes.textContent =
+
+                "Маршруты: " +
+
+                (
+                    stop.routes ||
+                    []
+                ).join(", ");
+
+
+            const badge =
+
+                document.createElement(
+                    "span"
+                );
+
+
+            badge.className =
+                "status";
+
+
+            const status =
+                getStatus(stop);
+
+
+            if (
+                status === "ПРОВЕРЕНО"
+            ) {
+
+                badge.classList.add(
+                    "status-verified"
+                );
+
+
+                badge.textContent =
+                    "🟢 ПРОВЕРЕНО";
+            }
+
+            else if (
+                status === "ЕСТЬ КООРДИНАТА"
+            ) {
+
+                badge.classList.add(
+                    "status-source"
+                );
+
+
+                badge.textContent =
+                    "🔵 ЕСТЬ КООРДИНАТА";
+            }
+
+            else if (
+                status === "ПРОБЛЕМА"
+            ) {
+
+                badge.classList.add(
+                    "status-problem"
+                );
+
+
+                badge.textContent =
+                    "🔴 ПРОБЛЕМА";
+            }
+
+            else {
+
+                badge.classList.add(
+                    "status-pending"
+                );
+
+
+                badge.textContent =
+                    "⚪ БЕЗ КООРДИНАТ";
+            }
+
+
+            button.appendChild(name);
+
+            button.appendChild(routes);
+
+            button.appendChild(badge);
+
+
+            button.onclick =
+                function() {
+
+                    selectStop(
+                        stop.id
+                    );
+
+                };
+
+
+            list.appendChild(button);
+        }
+
+    );
+}
+
+
+
+// ============================================================
+// ВЫБОР ОТСТОЯ
+// ============================================================
+
+function selectStop(id) {
+
+    activeStop =
+
+        allStops.find(
+
+            stop =>
+                stop.id === id
+
+        );
+
+
+    candidate = null;
+
+
+    candidateLayer
+        .clearLayers();
+
+
+    clearCompare();
+
+
+    renderCurrentStop();
+
+
+    renderStopList();
+}
+
+
+
+// ============================================================
+// КАРТОЧКА ВЫБРАННОГО ОТСТОЯ
+// ============================================================
+
+function renderCurrentStop() {
+
+    if (!activeStop) {
+        return;
     }
 
 
+    const stop =
+        activeStop;
 
-    // ========================================================
-    // ПРОВЕРЕННАЯ ТОЧКА
-    // ========================================================
 
+    const record =
+        getRecord(stop);
+
+
+    const existing =
+        getExistingCoordinates(stop);
+
+
+    document
+        .getElementById(
+            "currentName"
+        )
+        .textContent =
+            stop.name;
+
+
+    document
+        .getElementById(
+            "currentRoutes"
+        )
+        .textContent =
+
+            (
+                stop.routes ||
+                []
+            ).join(", ") ||
+            "—";
+
+
+    document
+        .getElementById(
+            "currentParks"
+        )
+        .textContent =
+
+            (
+                stop.parks ||
+                []
+            ).join(", ") ||
+            "—";
+
+
+    document
+        .getElementById(
+            "sourceLink"
+        )
+        .href =
+
+            stop.url ||
+            "#";
+
+
+    const status =
+        getStatus(stop);
+
+
+    const statusElement =
+
+        document.getElementById(
+            "currentStatus"
+        );
+
+
+    if (
+        status === "ПРОВЕРЕНО"
+    ) {
+
+        statusElement.textContent =
+            "🟢 ПРОВЕРЕНО";
+
+        statusElement.style.color =
+            "#198754";
+    }
+
+    else if (
+        status === "ЕСТЬ КООРДИНАТА"
+    ) {
+
+        statusElement.textContent =
+            "🔵 ЕСТЬ СТАРАЯ КООРДИНАТА — НУЖНА ПРОВЕРКА";
+
+        statusElement.style.color =
+            "#126caa";
+    }
+
+    else if (
+        status === "ПРОБЛЕМА"
+    ) {
+
+        statusElement.textContent =
+            "🔴 ПРОБЛЕМА";
+
+        statusElement.style.color =
+            "#dc3545";
+    }
 
     else {
 
+        statusElement.textContent =
+            "⚪ КООРДИНАТ НЕТ";
 
-        marker =
-
-            L.marker(
-
-                [
-                    stop.lat,
-                    stop.lon
-                ]
-
-            )
-            .addTo(
-                verifiedLayer
-            );
-
-
+        statusElement.style.color =
+            "#6b7280";
     }
 
 
-
-    // ========================================================
-    // ЦИФРА МАРШРУТОВ
-    // ========================================================
-
-
-    marker.bindTooltip(
-
-        String(
-            stop.routes.length
-        ),
-
-        {
-
-            permanent:
-                true,
-
-            direction:
-                "right",
-
-            offset:
-                [10, 0],
-
-            className:
-                "route-count-label"
-
-        }
-
-    );
-
-
-
-// ============================================================
-// 10. АВТОПАРКИ
-// ============================================================
-
-
-    let parksText =
-        "Не указано";
-
-
-    if (
-
-        stop.parks &&
-        stop.parks.length > 0
-
-    ) {
-
-
-        parksText =
-
-            stop.parks.join(
-                "<br>"
-            );
-
-
-    }
-
-
-
-// ============================================================
-// 11. СТАТУС
-// ============================================================
-
-
-    let statusText = `
-
-        <span
-            style="color:green"
-        >
-
-            ✓ Проверенная точка
-
-        </span>
-
-    `;
-
-
-
-    if (isAuto) {
-
-
-        statusText = `
-
-            <span
-                style="color:#d66a00"
-            >
-
-                ⚠ Требует проверки
-
-            </span>
-
-        `;
-
-
-    }
-
-
-
-// ============================================================
-// 12. ССЫЛКА 2ГИС
-// ============================================================
-
-
-    let gisButton = "";
-
-
-
-    if (stop.url) {
-
-
-        gisButton = `
-
-            <br><br>
-
-            <a
-                href="${stop.url}"
-                target="_blank"
-                rel="noopener"
-            >
-
-                Открыть исходную точку в 2ГИС
-
-            </a>
-
-        `;
-
-
-    }
-
-
-
-// ============================================================
-// 13. POPUP
-// ============================================================
-
-
-    marker.bindPopup(`
-
-        <b
-            style="font-size:16px"
-        >
-
-            ${stop.name}
-
-        </b>
-
-
-        <br><br>
-
-
-        ${statusText}
-
-
-        <br><br>
-
-
-        <b>
-            Маршрутов:
-        </b>
-
-        ${stop.routes.length}
-
-
-        <br><br>
-
-
-        <b>
-            Маршруты:
-        </b>
-
-        <br>
-
-        ${stop.routes.join(", ")}
-
-
-        <br><br>
-
-
-        <b>
-            Автопарки:
-        </b>
-
-        <br>
-
-        ${parksText}
-
-
-        <br><br>
-
-
-        <b>
-            Координаты:
-        </b>
-
-        <br>
-
-        ${stop.lat.toFixed(6)},
-
-        ${stop.lon.toFixed(6)}
-
-
-        ${gisButton}
-
-    `);
-
-
-
-    return marker;
-
-}
-
-
-
-// ============================================================
-// 14. РИСУЕМ ТОЧКИ ИЗ STOPS.JS
-// ============================================================
-
-
-stops.forEach(
-
-    function(stop) {
-
-
-        if (
-
-            stop.lat !== null &&
-            stop.lon !== null
-
-        ) {
-
-
-            drawStop(
-                stop,
-                false
-            );
-
-
-        }
-
-    }
-
-);
-
-
-
-// ============================================================
-// 15. ДОБАВЛЯЕМ КАНДИДАТА В ТАБЛИЦУ
-// ============================================================
-
-
-function addReviewItem(
-    stop,
-    result
-) {
-
-
-    reviewItems.push({
-
-        stop:
-            stop,
-
-        result:
-            result,
-
-        status:
-            "waiting"
-
-    });
-
-
-
-    renderReviewTable();
-
-
-    updateStats();
-
-}
-
-
-
-// ============================================================
-// 16. РИСУЕМ ТАБЛИЦУ
-// ============================================================
-
-
-function renderReviewTable() {
-
-
-    const body =
+    const coordinateInput =
 
         document.getElementById(
-            "reviewBody"
+            "coordinateInput"
         );
 
 
+    if (existing) {
 
-    body.innerHTML =
-        "";
+        coordinateInput.value =
 
+            existing.lon.toFixed(6) +
 
+            ", " +
 
-    reviewItems.forEach(
+            existing.lat.toFixed(6);
 
-        function(
-            item,
-            index
-        ) {
+    }
 
+    else {
 
-            const stop =
-                item.stop;
-
-
-            const result =
-                item.result;
+        coordinateInput.value =
+            "";
+    }
 
 
+    document
+        .getElementById(
+            "noteInput"
+        )
+        .value =
 
-            const row =
+            record
+                ? record.note || ""
+                : "";
 
-                document.createElement(
-                    "tr"
+
+    if (
+        record &&
+        record.checkedAt
+    ) {
+
+        document
+            .getElementById(
+                "lastCheck"
+            )
+            .textContent =
+
+                (
+                    record.reviewer ||
+                    "—"
+                ) +
+
+                " — " +
+
+                new Date(
+                    record.checkedAt
+                )
+                .toLocaleString(
+                    "ru-RU"
                 );
 
-
-
-            if (
-
-                item.status ===
-                "confirmed"
-
-            ) {
-
-
-                row.className =
-                    "review-ok";
-
-
-            }
-
-
-            else if (
-
-                item.status ===
-                "rejected"
-
-            ) {
-
-
-                row.className =
-                    "review-bad";
-
-
-            }
-
-
-            else {
-
-
-                row.className =
-                    "review-wait";
-
-
-            }
-
-
-
-// ============================================================
-// 17. КНОПКИ РЕШЕНИЯ
-// ============================================================
-
-
-            let buttons =
-                "";
-
-
-
-            if (
-
-                item.status ===
-                "waiting"
-
-            ) {
-
-
-                buttons = `
-
-                    <button
-                        class="btn-confirm"
-                        onclick="confirmReview(${index})"
-                    >
-
-                        ✓
-
-                    </button>
-
-
-                    <button
-                        class="btn-reject"
-                        onclick="rejectReview(${index})"
-                    >
-
-                        ✕
-
-                    </button>
-
-                `;
-
-
-            }
-
-
-            else if (
-
-                item.status ===
-                "confirmed"
-
-            ) {
-
-
-                buttons = `
-
-                    <b>
-                        ✓ Подтверждено
-                    </b>
-
-                `;
-
-
-            }
-
-
-            else {
-
-
-                buttons = `
-
-                    <b>
-                        ✕ Отклонено
-                    </b>
-
-                `;
-
-
-            }
-
-
-
-// ============================================================
-// 18. СТРОКА ТАБЛИЦЫ
-// ============================================================
-
-
-            row.innerHTML = `
-
-
-                <td>
-
-                    <b>
-                        ${stop.name}
-                    </b>
-
-                </td>
-
-
-
-                <td>
-
-                    ${result.address}
-
-                </td>
-
-
-
-                <td>
-
-                    ${Math.round(
-                        result.score
-                    )}%
-
-                </td>
-
-
-
-                <td>
-
-                    ${result.lat.toFixed(6)}
-
-                    <br>
-
-                    ${result.lon.toFixed(6)}
-
-                </td>
-
-
-
-                <td>
-
-                    ${stop.routes.join(", ")}
-
-                </td>
-
-
-
-                <td>
-
-                    <a
-                        class="review-link"
-                        href="${stop.url}"
-                        target="_blank"
-                        rel="noopener"
-                    >
-
-                        Открыть 2ГИС
-
-                    </a>
-
-
-                    <br>
-
-
-                    <button
-                        class="btn-show"
-                        onclick="focusReview(${index})"
-                    >
-
-                        📍 Показать
-
-                    </button>
-
-                </td>
-
-
-
-                <td>
-
-                    ${buttons}
-
-                </td>
-
-
-            `;
-
-
-
-            body.appendChild(
-                row
-            );
-
-
-        }
-
-    );
-
-}
-
-
-
-// ============================================================
-// 19. ПОКАЗАТЬ КАНДИДАТА НА КАРТЕ
-// ============================================================
-
-
-function focusReview(index) {
-
-
-    const item =
-        reviewItems[index];
-
-
-    const result =
-        item.result;
-
-
-
-    map.setView(
-
-        [
-            result.lat,
-            result.lon
-        ],
-
-        17
-
-    );
-
-
-
-    const key =
-        getStopKey(
-            item.stop
-        );
-
-
-
-    const marker =
-        candidateMarkers[
-            key
-        ];
-
-
-
-    if (marker) {
-
-
-        marker.openPopup();
-
-
     }
 
-}
+    else {
 
-
-
-// ============================================================
-// 20. ПОДТВЕРДИТЬ
-// ============================================================
-
-
-function confirmReview(index) {
-
-
-    const item =
-        reviewItems[index];
-
-
-    const stop =
-        item.stop;
-
-
-    const result =
-        item.result;
-
-
-    const key =
-        getStopKey(stop);
-
-
-
-    stop.lat =
-        result.lat;
-
-
-    stop.lon =
-        result.lon;
-
-
-
-    localStorage.setItem(
-
-        "verified_" + key,
-
-        JSON.stringify({
-
-            lat:
-                result.lat,
-
-            lon:
-                result.lon,
-
-            address:
-                result.address,
-
-            score:
-                result.score
-
-        })
-
-    );
-
-
-
-    localStorage.removeItem(
-
-        "rejected_" + key
-
-    );
-
-
-
-    if (
-        candidateMarkers[
-            key
-        ]
-    ) {
-
-
-        autoLayer.removeLayer(
-
-            candidateMarkers[
-                key
-            ]
-
-        );
-
-
-        delete candidateMarkers[
-            key
-        ];
-
-
+        document
+            .getElementById(
+                "lastCheck"
+            )
+            .textContent =
+                "—";
     }
 
 
+    if (existing) {
 
-    drawStop(
+        map.setView(
 
-        stop,
+            [
+                existing.lat,
+                existing.lon
+            ],
 
-        false
-
-    );
-
-
-
-    item.status =
-        "confirmed";
-
-
-
-    renderReviewTable();
-
-
-    updateStats();
-
-}
-
-
-
-// ============================================================
-// 21. ОТКЛОНИТЬ
-// ============================================================
-
-
-function rejectReview(index) {
-
-
-    const item =
-        reviewItems[index];
-
-
-    const stop =
-        item.stop;
-
-
-    const key =
-        getStopKey(stop);
-
-
-
-    localStorage.setItem(
-
-        "rejected_" + key,
-
-        "true"
-
-    );
-
-
-
-    if (
-        candidateMarkers[
-            key
-        ]
-    ) {
-
-
-        autoLayer.removeLayer(
-
-            candidateMarkers[
-                key
-            ]
+            17
 
         );
-
-
-        delete candidateMarkers[
-            key
-        ];
-
-
     }
 
 
-
-    item.status =
-        "rejected";
-
-
-
-    renderReviewTable();
-
-
-    updateStats();
-
+    clearMessage();
 }
 
 
 
 // ============================================================
-// 22. ФОРМИРУЕМ ПОИСКОВУЮ СТРОКУ
+// ПАРСИНГ КООРДИНАТ
 // ============================================================
 
+function parseCoordinates(text) {
 
-function buildSearchQuery(
-    stop
-) {
-
-
-    const name =
-
-        stop.name
-        .toLowerCase();
-
-
-
-    if (
-
-        name.includes(
-            "село"
-        ) ||
-
-        name.includes(
-            "талгар"
-        ) ||
-
-        name.includes(
-            "каскелен"
-        )
-
-    ) {
-
-
-        return (
-
-            stop.name +
-
-            ", Алматинская область, Казахстан"
-
-        );
-
-
+    if (!text) {
+        return null;
     }
 
 
-
-    return (
-
-        stop.name +
-
-        ", Алматы, Казахстан"
-
-    );
-
-}
-
-
-
-// ============================================================
-// 23. ГЕОКОДЕР
-// ============================================================
-
-
-async function geocodeStop(
-    stop
-) {
-
-
-    const query =
-        buildSearchQuery(
-            stop
-        );
-
-
-
-    const url =
-
-        "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates" +
-
-        "?SingleLine=" +
-
-        encodeURIComponent(
-            query
-        ) +
-
-        "&f=json" +
-
-        "&outFields=Match_addr" +
-
-        "&maxLocations=5";
-
+    let value =
+        text.trim();
 
 
     try {
 
-
-        const response =
-            await fetch(
-                url
+        value =
+            decodeURIComponent(
+                value
             );
 
+    }
+
+    catch (error) {
+    }
 
 
-        const data =
-            await response.json();
+    // =====================================
+    // 2GIS ?m=76.123456,43.123456
+    // =====================================
 
+    const mapMatch =
+
+        value.match(
+
+            /[?&]m=(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/i
+
+        );
+
+
+    if (mapMatch) {
+
+        const lon =
+            Number(mapMatch[1]);
+
+
+        const lat =
+            Number(mapMatch[2]);
 
 
         if (
-
-            !data.candidates ||
-
-            data.candidates.length ===
-            0
-
+            validCoordinates(
+                lat,
+                lon
+            )
         ) {
 
+            return {
+                lat,
+                lon
+            };
+        }
+    }
 
-            return null;
 
+    // =====================================
+    // 2GIS /geo/76.123,43.123
+    // =====================================
+
+    const geoMatch =
+
+        value.match(
+
+            /\/geo\/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/i
+
+        );
+
+
+    if (geoMatch) {
+
+        const lon =
+            Number(geoMatch[1]);
+
+
+        const lat =
+            Number(geoMatch[2]);
+
+
+        if (
+            validCoordinates(
+                lat,
+                lon
+            )
+        ) {
+
+            return {
+                lat,
+                lon
+            };
+        }
+    }
+
+
+    // =====================================
+    // ОБЫЧНЫЕ КООРДИНАТЫ
+    // =====================================
+
+    const simpleMatch =
+
+        value.match(
+
+            /(-?\d{2,3}(?:\.\d+)?)[,\s;]+(-?\d{2,3}(?:\.\d+)?)/
+
+        );
+
+
+    if (!simpleMatch) {
+
+        return null;
+    }
+
+
+    const a =
+        Number(simpleMatch[1]);
+
+
+    const b =
+        Number(simpleMatch[2]);
+
+
+    // longitude, latitude
+
+    if (
+        a >= 75 &&
+        a <= 80 &&
+
+        b >= 42 &&
+        b <= 45
+    ) {
+
+        return {
+
+            lat: b,
+
+            lon: a
+
+        };
+    }
+
+
+    // latitude, longitude
+
+    if (
+        a >= 42 &&
+        a <= 45 &&
+
+        b >= 75 &&
+        b <= 80
+    ) {
+
+        return {
+
+            lat: a,
+
+            lon: b
+
+        };
+    }
+
+
+    return null;
+}
+
+
+
+// ============================================================
+// РАССТОЯНИЕ В МЕТРАХ
+// ============================================================
+
+function distanceMeters(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const R =
+        6371000;
+
+
+    const toRad =
+        value =>
+            value *
+            Math.PI /
+            180;
+
+
+    const dLat =
+        toRad(
+            lat2 - lat1
+        );
+
+
+    const dLon =
+        toRad(
+            lon2 - lon1
+        );
+
+
+    const a =
+
+        Math.sin(
+            dLat / 2
+        ) ** 2 +
+
+        Math.cos(
+            toRad(lat1)
+        ) *
+
+        Math.cos(
+            toRad(lat2)
+        ) *
+
+        Math.sin(
+            dLon / 2
+        ) ** 2;
+
+
+    const c =
+
+        2 *
+
+        Math.atan2(
+
+            Math.sqrt(a),
+
+            Math.sqrt(1 - a)
+
+        );
+
+
+    return (
+        R * c
+    );
+}
+
+
+
+// ============================================================
+// СБРОС СРАВНЕНИЯ
+// ============================================================
+
+function clearCompare() {
+
+    const element =
+
+        document.getElementById(
+            "compareInfo"
+        );
+
+
+    element.style.display =
+        "none";
+
+
+    element.innerHTML =
+        "";
+}
+
+
+
+// ============================================================
+// ПОКАЗАТЬ НОВУЮ КООРДИНАТУ
+// ============================================================
+
+function showCandidate() {
+
+    if (!activeStop) {
+
+        showMessage(
+
+            "Сначала выберите отстой.",
+
+            "error"
+
+        );
+
+        return;
+    }
+
+
+    const input =
+
+        document
+            .getElementById(
+                "coordinateInput"
+            )
+            .value;
+
+
+    const parsed =
+        parseCoordinates(input);
+
+
+    if (!parsed) {
+
+        showMessage(
+
+            "Не понял координаты. Вставь полный URL из адресной строки 2ГИС или координаты вида 76.123456, 43.123456.",
+
+            "error"
+
+        );
+
+        return;
+    }
+
+
+    candidate =
+        parsed;
+
+
+    candidateLayer
+        .clearLayers();
+
+
+    const marker =
+
+        L.circleMarker(
+
+            [
+                parsed.lat,
+                parsed.lon
+            ],
+
+            {
+
+                radius: 12,
+
+                color: "#ffffff",
+
+                weight: 3,
+
+                fillColor: "#ff8c00",
+
+                fillOpacity: 1
+
+            }
+
+        )
+
+        .addTo(
+            candidateLayer
+        );
+
+
+    marker.bindPopup(
+
+        "<b>" +
+
+        activeStop.name +
+
+        "</b>" +
+
+        "<br><br>" +
+
+        "🟠 Новая координата" +
+
+        "<br>" +
+
+        parsed.lon.toFixed(6) +
+
+        ", " +
+
+        parsed.lat.toFixed(6)
+
+    )
+
+    .openPopup();
+
+
+    document
+        .getElementById(
+            "coordinateInput"
+        )
+        .value =
+
+            parsed.lon.toFixed(6) +
+
+            ", " +
+
+            parsed.lat.toFixed(6);
+
+
+    const existing =
+        getExistingCoordinates(
+            activeStop
+        );
+
+
+    const compareInfo =
+
+        document.getElementById(
+            "compareInfo"
+        );
+
+
+    compareInfo.style.display =
+        "block";
+
+
+    // ========================================
+    // ЕСТЬ СТАРАЯ / ПРОВЕРЕННАЯ КООРДИНАТА
+    // ========================================
+
+    if (existing) {
+
+        const distance =
+
+            distanceMeters(
+
+                existing.lat,
+                existing.lon,
+
+                parsed.lat,
+                parsed.lon
+
+            );
+
+
+        const rounded =
+            Math.round(distance);
+
+
+        if (
+            distance <= 20
+        ) {
+
+            compareInfo.style.background =
+                "#dff6e4";
+
+
+            compareInfo.style.color =
+                "#146c2e";
+
+
+            compareInfo.innerHTML =
+
+                "✅ Координаты практически совпадают.<br>" +
+
+                "Расстояние: " +
+
+                rounded +
+
+                " м";
+
+        }
+
+        else if (
+            distance <= 50
+        ) {
+
+            compareInfo.style.background =
+                "#fff4cc";
+
+
+            compareInfo.style.color =
+                "#805b00";
+
+
+            compareInfo.innerHTML =
+
+                "⚠ Есть небольшое расхождение.<br>" +
+
+                "Старая точка ↔ новая точка: " +
+
+                rounded +
+
+                " м.<br>" +
+
+                "Посмотри визуально на карте и в 2ГИС.";
+
+        }
+
+        else {
+
+            compareInfo.style.background =
+                "#ffe0e0";
+
+
+            compareInfo.style.color =
+                "#9a2424";
+
+
+            compareInfo.innerHTML =
+
+                "❗ КООРДИНАТЫ НЕ СХОДЯТСЯ.<br>" +
+
+                "Расстояние: " +
+
+                rounded +
+
+                " м.<br><br>" +
+
+                "Старая/текущая точка остаётся на карте.<br>" +
+
+                "🟠 Оранжевая — новая координата из 2ГИС.<br><br>" +
+
+                "Если оранжевая точка правильная — нажми ✅ Подтвердить.";
 
         }
 
 
+        const bounds =
 
-        const candidate =
+            L.latLngBounds([
 
-            data.candidates.find(
+                [
+                    existing.lat,
+                    existing.lon
+                ],
 
-                function(item) {
+                [
+                    parsed.lat,
+                    parsed.lon
+                ]
+
+            ]);
 
 
-                    const lat =
-                        item.location.y;
+        map.fitBounds(
+
+            bounds,
+
+            {
+
+                padding:
+                    [80, 80],
+
+                maxZoom:
+                    18
+
+            }
+
+        );
+
+    }
+
+    // ========================================
+    // КООРДИНАТЫ ВООБЩЕ НЕ БЫЛО
+    // ========================================
+
+    else {
+
+        compareInfo.style.background =
+            "#fff4cc";
 
 
-                    const lon =
-                        item.location.x;
+        compareInfo.style.color =
+            "#805b00";
+
+
+        compareInfo.innerHTML =
+
+            "🟠 Это новая координата.<br>" +
+
+            "Старой координаты для сравнения нет.<br>" +
+
+            "Проверь точку по 2ГИС и только потом подтверждай.";
+
+
+        map.setView(
+
+            [
+                parsed.lat,
+                parsed.lon
+            ],
+
+            18
+
+        );
+    }
+
+
+    showMessage(
+
+        "🟠 Проверь точку. Если это действительно отстой — нажми ✅ Подтвердить.",
+
+        "ok"
+
+    );
+}
 
 
 
-                    return (
+// ============================================================
+// ИМЯ ПРОВЕРЯЮЩЕГО
+// ============================================================
 
-                        lat > 42.8 &&
+function getReviewer() {
 
-                        lat < 44.0 &&
+    const input =
 
-                        lon > 75.8 &&
+        document.getElementById(
+            "reviewerInput"
+        );
 
-                        lon < 78.0
 
-                    );
+    const name =
+        input.value.trim();
 
+
+    if (name) {
+
+        localStorage.setItem(
+
+            "sma_reviewer",
+
+            name
+
+        );
+    }
+
+
+    return name;
+}
+
+
+
+// ============================================================
+// ПОДТВЕРДИТЬ
+// ============================================================
+
+async function confirmCurrent() {
+
+    if (!activeStop) {
+
+        showMessage(
+
+            "Сначала выберите отстой.",
+
+            "error"
+
+        );
+
+        return;
+    }
+
+
+    if (!candidate) {
+
+        showMessage(
+
+            "Сначала вставь координаты или URL 2ГИС и нажми 📍 Показать.",
+
+            "error"
+
+        );
+
+        return;
+    }
+
+
+    const reviewer =
+        getReviewer();
+
+
+    if (!reviewer) {
+
+        showMessage(
+
+            "Укажи имя проверяющего.",
+
+            "error"
+
+        );
+
+        return;
+    }
+
+
+    try {
+
+        await sendRecord({
+
+            id:
+                activeStop.id,
+
+            name:
+                activeStop.name,
+
+            routes:
+
+                (
+                    activeStop.routes ||
+                    []
+                ).join(", "),
+
+            park:
+
+                (
+                    activeStop.parks ||
+                    []
+                ).join(", "),
+
+            url:
+                activeStop.url || "",
+
+            lat:
+                candidate.lat,
+
+            lon:
+                candidate.lon,
+
+            status:
+                "ПРОВЕРЕНО",
+
+            reviewer:
+                reviewer,
+
+            note:
+
+                document
+                    .getElementById(
+                        "noteInput"
+                    )
+                    .value
+                    .trim()
+
+        });
+
+
+        candidateLayer
+            .clearLayers();
+
+
+        candidate =
+            null;
+
+
+        clearCompare();
+
+
+        renderEverything();
+
+
+        selectStop(
+            activeStop.id
+        );
+
+
+        showMessage(
+
+            "✅ Координата сохранена и отстой подтверждён.",
+
+            "ok"
+
+        );
+
+    }
+
+    catch (error) {
+
+        showMessage(
+
+            "Ошибка: " +
+            error.message,
+
+            "error"
+
+        );
+    }
+}
+
+
+
+// ============================================================
+// ПРОБЛЕМА
+// ============================================================
+
+async function markProblem() {
+
+    if (!activeStop) {
+
+        return;
+    }
+
+
+    const reviewer =
+        getReviewer();
+
+
+    if (!reviewer) {
+
+        showMessage(
+
+            "Укажи имя проверяющего.",
+
+            "error"
+
+        );
+
+        return;
+    }
+
+
+    const parsed =
+
+        parseCoordinates(
+
+            document
+                .getElementById(
+                    "coordinateInput"
+                )
+                .value
+
+        );
+
+
+    try {
+
+        await sendRecord({
+
+            id:
+                activeStop.id,
+
+            name:
+                activeStop.name,
+
+            routes:
+
+                (
+                    activeStop.routes ||
+                    []
+                ).join(", "),
+
+            park:
+
+                (
+                    activeStop.parks ||
+                    []
+                ).join(", "),
+
+            url:
+                activeStop.url || "",
+
+            lat:
+                parsed
+                    ? parsed.lat
+                    : "",
+
+            lon:
+                parsed
+                    ? parsed.lon
+                    : "",
+
+            status:
+                "ПРОБЛЕМА",
+
+            reviewer:
+                reviewer,
+
+            note:
+
+                document
+                    .getElementById(
+                        "noteInput"
+                    )
+                    .value
+                    .trim()
+
+        });
+
+
+        candidateLayer
+            .clearLayers();
+
+
+        candidate =
+            null;
+
+
+        clearCompare();
+
+
+        renderEverything();
+
+
+        selectStop(
+            activeStop.id
+        );
+
+
+        showMessage(
+
+            "🔴 Отстой отмечен как проблема.",
+
+            "ok"
+
+        );
+
+    }
+
+    catch (error) {
+
+        showMessage(
+
+            "Ошибка: " +
+            error.message,
+
+            "error"
+
+        );
+    }
+}
+
+
+
+// ============================================================
+// МАРКЕРЫ
+// ============================================================
+
+function renderMapMarkers() {
+
+    sourceLayer
+        .clearLayers();
+
+
+    verifiedLayer
+        .clearLayers();
+
+
+    problemLayer
+        .clearLayers();
+
+
+    allStops.forEach(
+
+        function(stop) {
+
+            const status =
+                getStatus(stop);
+
+
+            const record =
+                getRecord(stop);
+
+
+            let lat =
+                null;
+
+
+            let lon =
+                null;
+
+
+            let layer =
+                null;
+
+
+            let color =
+                null;
+
+
+            let statusText =
+                "";
+
+
+            if (
+                status === "ПРОВЕРЕНО"
+            ) {
+
+                if (
+                    !record ||
+                    !validCoordinates(
+
+                        Number(record.lat),
+
+                        Number(record.lon)
+
+                    )
+                ) {
+
+                    return;
+                }
+
+
+                lat =
+                    Number(record.lat);
+
+
+                lon =
+                    Number(record.lon);
+
+
+                layer =
+                    verifiedLayer;
+
+
+                color =
+                    "#198754";
+
+
+                statusText =
+                    "🟢 Проверено";
+
+            }
+
+            else if (
+                status === "ЕСТЬ КООРДИНАТА"
+            ) {
+
+                lat =
+                    Number(stop.lat);
+
+
+                lon =
+                    Number(stop.lon);
+
+
+                layer =
+                    sourceLayer;
+
+
+                color =
+                    "#126caa";
+
+
+                statusText =
+                    "🔵 Есть старая координата";
+
+            }
+
+            else if (
+                status === "ПРОБЛЕМА"
+            ) {
+
+                if (
+                    record &&
+                    validCoordinates(
+
+                        Number(record.lat),
+
+                        Number(record.lon)
+
+                    )
+                ) {
+
+                    lat =
+                        Number(record.lat);
+
+
+                    lon =
+                        Number(record.lon);
+
+                }
+
+                else if (
+                    hasSourceCoordinates(stop)
+                ) {
+
+                    lat =
+                        Number(stop.lat);
+
+
+                    lon =
+                        Number(stop.lon);
+
+                }
+
+                else {
+
+                    return;
+                }
+
+
+                layer =
+                    problemLayer;
+
+
+                color =
+                    "#dc3545";
+
+
+                statusText =
+                    "🔴 Проблема";
+            }
+
+
+            if (
+                !layer ||
+                !validCoordinates(
+                    lat,
+                    lon
+                )
+            ) {
+
+                return;
+            }
+
+
+            const marker =
+
+                L.circleMarker(
+
+                    [
+                        lat,
+                        lon
+                    ],
+
+                    {
+
+                        radius: 8,
+
+                        color:
+                            "#ffffff",
+
+                        weight: 2,
+
+                        fillColor:
+                            color,
+
+                        fillOpacity: 1
+
+                    }
+
+                )
+
+                .addTo(
+                    layer
+                );
+
+
+            marker.bindTooltip(
+
+                String(
+
+                    (
+                        stop.routes ||
+                        []
+                    ).length
+
+                ),
+
+                {
+
+                    permanent:
+                        true,
+
+                    direction:
+                        "right",
+
+                    offset:
+                        [9, 0],
+
+                    className:
+                        "route-count-label"
 
                 }
 
             );
 
 
+            marker.bindPopup(
 
-        if (!candidate) {
+                "<b>" +
+
+                stop.name +
+
+                "</b>" +
+
+                "<br><br>" +
+
+                statusText +
+
+                "<br><br>" +
+
+                "Маршруты: " +
+
+                (
+                    stop.routes ||
+                    []
+                ).join(", ")
+
+            );
 
 
-            return null;
+            marker.on(
 
+                "click",
+
+                function() {
+
+                    selectStop(
+                        stop.id
+                    );
+
+                }
+
+            );
 
         }
 
-
-
-        return {
-
-            lat:
-                candidate.location.y,
-
-            lon:
-                candidate.location.x,
-
-            score:
-                candidate.score,
-
-            address:
-                candidate.address
-
-        };
-
-
-    }
-
-
-    catch (
-        error
-    ) {
-
-
-        console.error(
-
-            "Ошибка поиска:",
-
-            stop.name,
-
-            error
-
-        );
-
-
-        return null;
-
-
-    }
-
+    );
 }
 
 
 
 // ============================================================
-// 24. ПАУЗА МЕЖДУ ЗАПРОСАМИ
+// СЛЕДУЮЩИЙ НА ПРОВЕРКУ
 // ============================================================
 
+function nextReview() {
 
-function sleep(ms) {
+    const sourceStop =
+
+        allStops.find(
+
+            stop =>
+
+                getStatus(stop) ===
+                "ЕСТЬ КООРДИНАТА"
+
+        );
 
 
-    return new Promise(
+    if (sourceStop) {
 
-        function(resolve) {
+        selectStop(
+            sourceStop.id
+        );
+
+        return;
+    }
 
 
-            setTimeout(
+    const pendingStop =
 
-                resolve,
+        allStops.find(
 
-                ms
+            stop =>
 
-            );
+                getStatus(stop) ===
+                "НЕ ПРОВЕРЕНО"
 
+        );
+
+
+    if (pendingStop) {
+
+        selectStop(
+            pendingStop.id
+        );
+
+        return;
+    }
+
+
+    const problemStop =
+
+        allStops.find(
+
+            stop =>
+
+                getStatus(stop) ===
+                "ПРОБЛЕМА"
+
+        );
+
+
+    if (problemStop) {
+
+        selectStop(
+            problemStop.id
+        );
+
+        return;
+    }
+
+
+    showMessage(
+
+        "Все отстои обработаны 🎉",
+
+        "ok"
+
+    );
+}
+
+
+
+// ============================================================
+// ВСЯ ОТРИСОВКА
+// ============================================================
+
+function renderEverything() {
+
+    renderStats();
+
+    renderStopList();
+
+    renderMapMarkers();
+
+
+    if (activeStop) {
+
+        renderCurrentStop();
+    }
+}
+
+
+
+// ============================================================
+// СООБЩЕНИЯ
+// ============================================================
+
+function showMessage(
+    text,
+    type
+) {
+
+    const el =
+
+        document.getElementById(
+            "message"
+        );
+
+
+    el.textContent =
+        text;
+
+
+    el.className =
+
+        "message " +
+        type;
+}
+
+
+
+function clearMessage() {
+
+    const el =
+
+        document.getElementById(
+            "message"
+        );
+
+
+    el.textContent =
+        "";
+
+
+    el.className =
+        "message";
+}
+
+
+
+// ============================================================
+// СОБЫТИЯ
+// ============================================================
+
+document
+    .getElementById(
+        "searchInput"
+    )
+    .addEventListener(
+
+        "input",
+
+        renderStopList
+
+    );
+
+
+
+document
+    .getElementById(
+        "statusFilter"
+    )
+    .addEventListener(
+
+        "change",
+
+        renderStopList
+
+    );
+
+
+
+document
+    .getElementById(
+        "showButton"
+    )
+    .addEventListener(
+
+        "click",
+
+        showCandidate
+
+    );
+
+
+
+document
+    .getElementById(
+        "confirmButton"
+    )
+    .addEventListener(
+
+        "click",
+
+        confirmCurrent
+
+    );
+
+
+
+document
+    .getElementById(
+        "problemButton"
+    )
+    .addEventListener(
+
+        "click",
+
+        markProblem
+
+    );
+
+
+
+document
+    .getElementById(
+        "nextButton"
+    )
+    .addEventListener(
+
+        "click",
+
+        nextReview
+
+    );
+
+
+
+document
+    .getElementById(
+        "refreshButton"
+    )
+    .addEventListener(
+
+        "click",
+
+        loadRecords
+
+    );
+
+
+
+document
+    .getElementById(
+        "coordinateInput"
+    )
+    .addEventListener(
+
+        "input",
+
+        function() {
+
+            candidate =
+                null;
+
+
+            candidateLayer
+                .clearLayers();
+
+
+            clearCompare();
 
         }
 
     );
 
-}
+
+
+// ============================================================
+// СОХРАНЕНИЕ ИМЕНИ ПРОВЕРЯЮЩЕГО
+// ============================================================
+
+document
+    .getElementById(
+        "reviewerInput"
+    )
+    .value =
+
+        localStorage.getItem(
+            "sma_reviewer"
+        ) || "";
 
 
 
 // ============================================================
-// 25. ПОИСК ВСЕХ ТОЧЕК БЕЗ КООРДИНАТ
+// СТАРТ
 // ============================================================
 
+renderStats();
 
-async function findMissingStops() {
+renderStopList();
 
+renderMapMarkers();
 
-    for (
-        const stop of stops
-    ) {
-
-
-
-// ============================================================
-// ТОЧКА УЖЕ ЕСТЬ В STOPS.JS
-// ============================================================
-
-
-        if (
-
-            stop.lat !== null &&
-            stop.lon !== null
-
-        ) {
-
-
-            continue;
-
-
-        }
-
-
-
-        const key =
-            getStopKey(stop);
+loadRecords();
 
 
 
 // ============================================================
-// РАНЕЕ ПОДТВЕРЖДЕНА
+// АВТОСИНХРОНИЗАЦИЯ РАЗ В МИНУТУ
 // ============================================================
 
+setInterval(
 
-        const verifiedSaved =
+    loadRecords,
 
-            localStorage.getItem(
+    60000
 
-                "verified_" +
-                key
-
-            );
-
-
-
-        if (
-            verifiedSaved
-        ) {
-
-
-            const saved =
-
-                JSON.parse(
-                    verifiedSaved
-                );
-
-
-
-            stop.lat =
-                saved.lat;
-
-
-            stop.lon =
-                saved.lon;
-
-
-
-            drawStop(
-
-                stop,
-
-                false
-
-            );
-
-
-            updateStats();
-
-
-            continue;
-
-        }
-
-
-
-// ============================================================
-// РАНЕЕ ОТКЛОНЕНА
-// ============================================================
-
-
-        const rejectedSaved =
-
-            localStorage.getItem(
-
-                "rejected_" +
-                key
-
-            );
-
-
-
-        if (
-            rejectedSaved
-        ) {
-
-
-            continue;
-
-
-        }
-
-
-
-// ============================================================
-// ПРОВЕРЯЕМ КЭШ КАНДИДАТА
-// ============================================================
-
-
-        const cacheKey =
-
-            "candidate_" +
-            key;
-
-
-
-        const cached =
-
-            localStorage.getItem(
-                cacheKey
-            );
-
-
-
-        if (
-            cached
-        ) {
-
-
-            const result =
-
-                JSON.parse(
-                    cached
-                );
-
-
-
-            stop.lat =
-                result.lat;
-
-
-            stop.lon =
-                result.lon;
-
-
-
-            const marker =
-
-                drawStop(
-
-                    stop,
-
-                    true
-
-                );
-
-
-
-            candidateMarkers[
-                key
-            ] =
-                marker;
-
-
-
-            addReviewItem(
-
-                stop,
-
-                result
-
-            );
-
-
-            continue;
-
-        }
-
-
-
-// ============================================================
-// ИЩЕМ В ГЕОКОДЕРЕ
-// ============================================================
-
-
-        console.log(
-
-            "Ищу:",
-
-            stop.name
-
-        );
-
-
-
-        const result =
-
-            await geocodeStop(
-                stop
-            );
-
-
-
-        if (
-            !result
-        ) {
-
-
-            console.warn(
-
-                "Не найдено:",
-
-                stop.name
-
-            );
-
-
-            await sleep(
-                500
-            );
-
-
-            continue;
-
-        }
-
-
-
-// ============================================================
-// СЛАБОЕ СОВПАДЕНИЕ
-// ============================================================
-
-
-        if (
-            result.score <
-            70
-        ) {
-
-
-            console.warn(
-
-                "Слабое совпадение:",
-
-                stop.name,
-
-                result.score
-
-            );
-
-
-            await sleep(
-                500
-            );
-
-
-            continue;
-
-        }
-
-
-
-// ============================================================
-// СОХРАНЯЕМ КАНДИДАТА
-// ============================================================
-
-
-        stop.lat =
-            result.lat;
-
-
-        stop.lon =
-            result.lon;
-
-
-
-        localStorage.setItem(
-
-            cacheKey,
-
-            JSON.stringify(
-                result
-            )
-
-        );
-
-
-
-// ============================================================
-// РИСУЕМ КАНДИДАТА
-// ============================================================
-
-
-        const marker =
-
-            drawStop(
-
-                stop,
-
-                true
-
-            );
-
-
-
-        candidateMarkers[
-            key
-        ] =
-            marker;
-
-
-
-        addReviewItem(
-
-            stop,
-
-            result
-
-        );
-
-
-
-        await sleep(
-            500
-        );
-
-    }
-
-
-
-    updateStats();
-
-
-
-    console.log(
-
-        "Поиск координат завершён"
-
-    );
-
-}
-
-
-
-// ============================================================
-// 26. ЗАПУСК
-// ============================================================
-
-
-updateStats();
-
-
-findMissingStops();
+);
 
 
 </script>
