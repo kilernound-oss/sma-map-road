@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SMA MAP ROAD</title>
+
+
+    <!-- =========================================
+         LEAFLET CSS
+         ========================================= -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+
+    <style>
+
+        /* =========================================
+           ОСНОВНЫЕ СТИЛИ
+           ========================================= */
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background:
+                #f5f7fa;
+
+        }
+
+
+        header {
+
+            background:
+                #142f44;
+
+            color:
+                white;
+
+            padding:
+                15px 20px;
+
+        }
+
+
+        header h1 {
+
+            margin:
+                0;
+
+            font-size:
+                24px;
+
+        }
+
+
+        header p {
+
+            margin:
+                5px 0 0;
+
+            color:
+                #d6e2eb;
+
+        }
+
+
+
+        /* =========================================
+           СТАТИСТИКА
+           ========================================= */
+
+        #stats {
+
+            display:
+                flex;
+
+            gap:
+                25px;
+
+            flex-wrap:
+                wrap;
+
+            padding:
+                12px 20px;
+
+            background:
+                white;
+
+            border-bottom:
+                1px solid #ddd;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        .stat {
+
+            display:
+                flex;
+
+            gap:
+                5px;
+
+        }
+
+
+        .stat-number {
+
+            color:
+                #126caa;
+
+        }
+
+
+
+        /* =========================================
+           КАРТА
+           ========================================= */
+
+        #map {
+
+            width:
+                100%;
+
+            height:
+                70vh;
+
+            min-height:
+                500px;
+
+        }
+
+
+
+        /* =========================================
+           ЦИФРА ВОЗЛЕ МАРКЕРА
+           ========================================= */
+
+        .route-count-label {
+
+            background:
+                white;
+
+            border:
+                2px solid #333;
+
+            border-radius:
+                20px;
+
+            font-size:
+                14px;
+
+            font-weight:
+                bold;
+
+            padding:
+                3px 8px;
+
+            color:
+                #111;
+
+            box-shadow:
+                0 2px 5px
+                rgba(0,0,0,0.3);
+
+        }
+
+
+
+        /* =========================================
+           ПАНЕЛЬ ПРОВЕРКИ
+           ========================================= */
+
+        #reviewPanel {
+
+            padding:
+                20px;
+
+        }
+
+
+        #reviewPanel h2 {
+
+            margin-top:
+                0;
+
+        }
+
+
+        #reviewPanel p {
+
+            color:
+                #555;
+
+        }
+
+
+
+        /* =========================================
+           ТАБЛИЦА
+           ========================================= */
+
+        .table-wrapper {
+
+            overflow-x:
+                auto;
+
+        }
+
+
+        #reviewTable {
+
+            width:
+                100%;
+
+            border-collapse:
+                collapse;
+
+            background:
+                white;
+
+            min-width:
+                1000px;
+
+        }
+
+
+        #reviewTable th,
+        #reviewTable td {
+
+            border:
+                1px solid #ddd;
+
+            padding:
+                10px;
+
+            text-align:
+                left;
+
+            vertical-align:
+                top;
+
+            font-size:
+                13px;
+
+        }
+
+
+        #reviewTable th {
+
+            background:
+                #202b38;
+
+            color:
+                white;
+
+        }
+
+
+
+        /* =========================================
+           СТАТУСЫ СТРОК
+           ========================================= */
+
+        .review-wait {
+
+            background:
+                #fff8df;
+
+        }
+
+
+        .review-ok {
+
+            background:
+                #e9f8ed;
+
+        }
+
+
+        .review-bad {
+
+            background:
+                #ffeaea;
+
+        }
+
+
+
+        /* =========================================
+           КНОПКИ
+           ========================================= */
+
+        button {
+
+            cursor:
+                pointer;
+
+            border:
+                none;
+
+            border-radius:
+                5px;
+
+            padding:
+                7px 10px;
+
+        }
+
+
+        .btn-confirm {
+
+            background:
+                #198754;
+
+            color:
+                white;
+
+            margin-right:
+                5px;
+
+        }
+
+
+        .btn-reject {
+
+            background:
+                #dc3545;
+
+            color:
+                white;
+
+        }
+
+
+        .btn-show {
+
+            background:
+                #126caa;
+
+            color:
+                white;
+
+            margin-top:
+                7px;
+
+        }
+
+
+
+        /* =========================================
+           ССЫЛКА
+           ========================================= */
+
+        .review-link {
+
+            color:
+                #126caa;
+
+            font-weight:
+                bold;
+
+            text-decoration:
+                none;
+
+        }
+
+
+        .review-link:hover {
+
+            text-decoration:
+                underline;
+
+        }
+
+
+
+        /* =========================================
+           MOBILE
+           ========================================= */
+
+        @media (
+            max-width: 700px
+        ) {
+
+            #map {
+
+                height:
+                    60vh;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+
+<body>
+
+
+<!-- =========================================
+     HEADER
+     ========================================= -->
+
+<header>
+
+    <h1>
+        SMA MAP ROAD
+    </h1>
+
+    <p>
+        Карта отстоев общественного транспорта Алматы
+    </p>
+
+</header>
+
+
+
+<!-- =========================================
+     СТАТИСТИКА
+     ========================================= -->
+
+<div id="stats">
+
+    <div class="stat">
+
+        Проверенные:
+
+        <span
+            id="verifiedCount"
+            class="stat-number"
+        >
+            0
+        </span>
+
+    </div>
+
+
+    <div class="stat">
+
+        Автоматически найденные:
+
+        <span
+            id="autoCount"
+            class="stat-number"
+        >
+            0
+        </span>
+
+    </div>
+
+
+    <div class="stat">
+
+        Ожидают проверки:
+
+        <span
+            id="reviewCount"
+            class="stat-number"
+        >
+            0
+        </span>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================================
+     КАРТА
+     ========================================= -->
+
+<div id="map"></div>
+
+
+
+<!-- =========================================
+     ПАНЕЛЬ ПРОВЕРКИ
+     ========================================= -->
+
+<div id="reviewPanel">
+
+    <h2>
+        Проверка найденных отстоев
+    </h2>
+
+
+    <p>
+
+        Оранжевые точки определены автоматически.
+
+        Открой 2ГИС,
+
+        затем нажми «Показать»,
+
+        сравни две точки
+
+        и выбери ✓ или ✕.
+
+    </p>
+
+
+    <div class="table-wrapper">
+
+        <table id="reviewTable">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Наше название
+                    </th>
+
+                    <th>
+                        Что нашёл геокодер
+                    </th>
+
+                    <th>
+                        Точность
+                    </th>
+
+                    <th>
+                        Координаты
+                    </th>
+
+                    <th>
+                        Маршруты
+                    </th>
+
+                    <th>
+                        Проверка
+                    </th>
+
+                    <th>
+                        Решение
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="reviewBody">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================================
+     LEAFLET
+     ========================================= -->
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+
+<!-- =========================================
+     НАША БАЗА ОТСТОЕВ
+     ========================================= -->
+
+<script src="stops.js"></script>
+
+
+
+<script>
+
+
+// ============================================================
+// 1. СОЗДАЕМ КАРТУ
+// ============================================================
+
+
+const map =
+    L.map("map").setView(
+
+        [
+            43.238949,
+            76.889709
+        ],
+
+        11
+
+    );
+
+
+
+// ============================================================
+// 2. ФОН КАРТЫ
+// ============================================================
+
+
+L.tileLayer(
+
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+
+    {
+
+        maxZoom:
+            19,
+
+        attribution:
+            "Esri"
+
+    }
+
+).addTo(map);
+
+
+
+// ============================================================
+// 3. СОЗДАЕМ СЛОИ
+// ============================================================
+
+
+const verifiedLayer =
+    L.layerGroup()
+    .addTo(map);
+
+
+const autoLayer =
+    L.layerGroup()
+    .addTo(map);
+
+
+
+// ============================================================
+// 4. ПЕРЕКЛЮЧАТЕЛЬ СЛОЕВ
+// ============================================================
+
+
+L.control.layers(
+
+    {},
+
+    {
+
+        "✓ Проверенные отстои":
+            verifiedLayer,
+
+        "⚠ Требуют проверки":
+            autoLayer
+
+    }
+
+).addTo(map);
+
+
+
+// ============================================================
+// 5. МАССИВ ДЛЯ ТАБЛИЦЫ ПРОВЕРКИ
+// ============================================================
+
+
+const reviewItems = [];
+
+
+
+// ============================================================
+// 6. ХРАНИМ АВТОМАТИЧЕСКИЕ МАРКЕРЫ
+// ============================================================
+
+
+const candidateMarkers = {};
+
+
+
+// ============================================================
+// 7. КЛЮЧ ДЛЯ LOCALSTORAGE
+// ============================================================
+
+
+function getStopKey(stop) {
+
+
+    if (stop.url) {
+
+        return stop.url;
+
+    }
+
+
+    return stop.name;
+
+}
+
+
+
+// ============================================================
+// 8. СТАТИСТИКА
+// ============================================================
+
+
+function updateStats() {
+
+
+    let verified = 0;
+
+
+
+    stops.forEach(
+
+        function(stop) {
+
+
+            if (
+
+                stop.lat !== null &&
+                stop.lon !== null
+
+            ) {
+
+
+                verified++;
+
+
+            }
+
+        }
+
+    );
+
+
+
+    document
+        .getElementById(
+            "verifiedCount"
+        )
+        .textContent =
+            verified;
+
+
+
+    document
+        .getElementById(
+            "autoCount"
+        )
+        .textContent =
+
+            Object.keys(
+                candidateMarkers
+            ).length;
+
+
+
+    const waiting =
+
+        reviewItems.filter(
+
+            function(item) {
+
+                return (
+                    item.status ===
+                    "waiting"
+                );
+
+            }
+
+        ).length;
+
+
+
+    document
+        .getElementById(
+            "reviewCount"
+        )
+        .textContent =
+            waiting;
+
+}
+
+
+
+// ============================================================
+// 9. РИСУЕМ ОДИН ОТСТОЙ
+// ============================================================
+
+
+function drawStop(
+    stop,
+    isAuto = false
+) {
+
+
+    let marker;
+
+
+
+    // ========================================================
+    // АВТОМАТИЧЕСКАЯ ТОЧКА
+    // ========================================================
+
+
+    if (isAuto) {
+
+
+        marker =
+
+            L.circleMarker(
+
+                [
+                    stop.lat,
+                    stop.lon
+                ],
+
+                {
+
+                    radius:
+                        9,
+
+                    color:
+                        "#ffffff",
+
+                    weight:
+                        2,
+
+                    fillColor:
+                        "#ff8c00",
+
+                    fillOpacity:
+                        1
+
+                }
+
+            )
+            .addTo(
+                autoLayer
+            );
+
+
+    }
+
+
+
+    // ========================================================
+    // ПРОВЕРЕННАЯ ТОЧКА
+    // ========================================================
+
+
+    else {
+
+
+        marker =
+
+            L.marker(
+
+                [
+                    stop.lat,
+                    stop.lon
+                ]
+
+            )
+            .addTo(
+                verifiedLayer
+            );
+
+
+    }
+
+
+
+    // ========================================================
+    // ЦИФРА МАРШРУТОВ
+    // ========================================================
+
+
+    marker.bindTooltip(
+
+        String(
+            stop.routes.length
+        ),
+
+        {
+
+            permanent:
+                true,
+
+            direction:
+                "right",
+
+            offset:
+                [10, 0],
+
+            className:
+                "route-count-label"
+
+        }
+
+    );
+
+
+
+// ============================================================
+// 10. АВТОПАРКИ
+// ============================================================
+
+
+    let parksText =
+        "Не указано";
+
+
+    if (
+
+        stop.parks &&
+        stop.parks.length > 0
+
+    ) {
+
+
+        parksText =
+
+            stop.parks.join(
+                "<br>"
+            );
+
+
+    }
+
+
+
+// ============================================================
+// 11. СТАТУС
+// ============================================================
+
+
+    let statusText = `
+
+        <span
+            style="color:green"
+        >
+
+            ✓ Проверенная точка
+
+        </span>
+
+    `;
+
+
+
+    if (isAuto) {
+
+
+        statusText = `
+
+            <span
+                style="color:#d66a00"
+            >
+
+                ⚠ Требует проверки
+
+            </span>
+
+        `;
+
+
+    }
+
+
+
+// ============================================================
+// 12. ССЫЛКА 2ГИС
+// ============================================================
+
+
+    let gisButton = "";
+
+
+
+    if (stop.url) {
+
+
+        gisButton = `
+
+            <br><br>
+
+            <a
+                href="${stop.url}"
+                target="_blank"
+                rel="noopener"
+            >
+
+                Открыть исходную точку в 2ГИС
+
+            </a>
+
+        `;
+
+
+    }
+
+
+
+// ============================================================
+// 13. POPUP
+// ============================================================
+
+
+    marker.bindPopup(`
+
+        <b
+            style="font-size:16px"
+        >
+
+            ${stop.name}
+
+        </b>
+
+
+        <br><br>
+
+
+        ${statusText}
+
+
+        <br><br>
+
+
+        <b>
+            Маршрутов:
+        </b>
+
+        ${stop.routes.length}
+
+
+        <br><br>
+
+
+        <b>
+            Маршруты:
+        </b>
+
+        <br>
+
+        ${stop.routes.join(", ")}
+
+
+        <br><br>
+
+
+        <b>
+            Автопарки:
+        </b>
+
+        <br>
+
+        ${parksText}
+
+
+        <br><br>
+
+
+        <b>
+            Координаты:
+        </b>
+
+        <br>
+
+        ${stop.lat.toFixed(6)},
+
+        ${stop.lon.toFixed(6)}
+
+
+        ${gisButton}
+
+    `);
+
+
+
+    return marker;
+
+}
+
+
+
+// ============================================================
+// 14. РИСУЕМ ТОЧКИ ИЗ STOPS.JS
+// ============================================================
+
+
+stops.forEach(
+
+    function(stop) {
+
+
+        if (
+
+            stop.lat !== null &&
+            stop.lon !== null
+
+        ) {
+
+
+            drawStop(
+                stop,
+                false
+            );
+
+
+        }
+
+    }
+
+);
+
+
+
+// ============================================================
+// 15. ДОБАВЛЯЕМ КАНДИДАТА В ТАБЛИЦУ
+// ============================================================
+
+
+function addReviewItem(
+    stop,
+    result
+) {
+
+
+    reviewItems.push({
+
+        stop:
+            stop,
+
+        result:
+            result,
+
+        status:
+            "waiting"
+
+    });
+
+
+
+    renderReviewTable();
+
+
+    updateStats();
+
+}
+
+
+
+// ============================================================
+// 16. РИСУЕМ ТАБЛИЦУ
+// ============================================================
+
+
+function renderReviewTable() {
+
+
+    const body =
+
+        document.getElementById(
+            "reviewBody"
+        );
+
+
+
+    body.innerHTML =
+        "";
+
+
+
+    reviewItems.forEach(
+
+        function(
+            item,
+            index
+        ) {
+
+
+            const stop =
+                item.stop;
+
+
+            const result =
+                item.result;
+
+
+
+            const row =
+
+                document.createElement(
+                    "tr"
+                );
+
+
+
+            if (
+
+                item.status ===
+                "confirmed"
+
+            ) {
+
+
+                row.className =
+                    "review-ok";
+
+
+            }
+
+
+            else if (
+
+                item.status ===
+                "rejected"
+
+            ) {
+
+
+                row.className =
+                    "review-bad";
+
+
+            }
+
+
+            else {
+
+
+                row.className =
+                    "review-wait";
+
+
+            }
+
+
+
+// ============================================================
+// 17. КНОПКИ РЕШЕНИЯ
+// ============================================================
+
+
+            let buttons =
+                "";
+
+
+
+            if (
+
+                item.status ===
+                "waiting"
+
+            ) {
+
+
+                buttons = `
+
+                    <button
+                        class="btn-confirm"
+                        onclick="confirmReview(${index})"
+                    >
+
+                        ✓
+
+                    </button>
+
+
+                    <button
+                        class="btn-reject"
+                        onclick="rejectReview(${index})"
+                    >
+
+                        ✕
+
+                    </button>
+
+                `;
+
+
+            }
+
+
+            else if (
+
+                item.status ===
+                "confirmed"
+
+            ) {
+
+
+                buttons = `
+
+                    <b>
+                        ✓ Подтверждено
+                    </b>
+
+                `;
+
+
+            }
+
+
+            else {
+
+
+                buttons = `
+
+                    <b>
+                        ✕ Отклонено
+                    </b>
+
+                `;
+
+
+            }
+
+
+
+// ============================================================
+// 18. СТРОКА ТАБЛИЦЫ
+// ============================================================
+
+
+            row.innerHTML = `
+
+
+                <td>
+
+                    <b>
+                        ${stop.name}
+                    </b>
+
+                </td>
+
+
+
+                <td>
+
+                    ${result.address}
+
+                </td>
+
+
+
+                <td>
+
+                    ${Math.round(
+                        result.score
+                    )}%
+
+                </td>
+
+
+
+                <td>
+
+                    ${result.lat.toFixed(6)}
+
+                    <br>
+
+                    ${result.lon.toFixed(6)}
+
+                </td>
+
+
+
+                <td>
+
+                    ${stop.routes.join(", ")}
+
+                </td>
+
+
+
+                <td>
+
+                    <a
+                        class="review-link"
+                        href="${stop.url}"
+                        target="_blank"
+                        rel="noopener"
+                    >
+
+                        Открыть 2ГИС
+
+                    </a>
+
+
+                    <br>
+
+
+                    <button
+                        class="btn-show"
+                        onclick="focusReview(${index})"
+                    >
+
+                        📍 Показать
+
+                    </button>
+
+                </td>
+
+
+
+                <td>
+
+                    ${buttons}
+
+                </td>
+
+
+            `;
+
+
+
+            body.appendChild(
+                row
+            );
+
+
+        }
+
+    );
+
+}
+
+
+
+// ============================================================
+// 19. ПОКАЗАТЬ КАНДИДАТА НА КАРТЕ
+// ============================================================
+
+
+function focusReview(index) {
+
+
+    const item =
+        reviewItems[index];
+
+
+    const result =
+        item.result;
+
+
+
+    map.setView(
+
+        [
+            result.lat,
+            result.lon
+        ],
+
+        17
+
+    );
+
+
+
+    const key =
+        getStopKey(
+            item.stop
+        );
+
+
+
+    const marker =
+        candidateMarkers[
+            key
+        ];
+
+
+
+    if (marker) {
+
+
+        marker.openPopup();
+
+
+    }
+
+}
+
+
+
+// ============================================================
+// 20. ПОДТВЕРДИТЬ
+// ============================================================
+
+
+function confirmReview(index) {
+
+
+    const item =
+        reviewItems[index];
+
+
+    const stop =
+        item.stop;
+
+
+    const result =
+        item.result;
+
+
+    const key =
+        getStopKey(stop);
+
+
+
+    stop.lat =
+        result.lat;
+
+
+    stop.lon =
+        result.lon;
+
+
+
+    localStorage.setItem(
+
+        "verified_" + key,
+
+        JSON.stringify({
+
+            lat:
+                result.lat,
+
+            lon:
+                result.lon,
+
+            address:
+                result.address,
+
+            score:
+                result.score
+
+        })
+
+    );
+
+
+
+    localStorage.removeItem(
+
+        "rejected_" + key
+
+    );
+
+
+
+    if (
+        candidateMarkers[
+            key
+        ]
+    ) {
+
+
+        autoLayer.removeLayer(
+
+            candidateMarkers[
+                key
+            ]
+
+        );
+
+
+        delete candidateMarkers[
+            key
+        ];
+
+
+    }
+
+
+
+    drawStop(
+
+        stop,
+
+        false
+
+    );
+
+
+
+    item.status =
+        "confirmed";
+
+
+
+    renderReviewTable();
+
+
+    updateStats();
+
+}
+
+
+
+// ============================================================
+// 21. ОТКЛОНИТЬ
+// ============================================================
+
+
+function rejectReview(index) {
+
+
+    const item =
+        reviewItems[index];
+
+
+    const stop =
+        item.stop;
+
+
+    const key =
+        getStopKey(stop);
+
+
+
+    localStorage.setItem(
+
+        "rejected_" + key,
+
+        "true"
+
+    );
+
+
+
+    if (
+        candidateMarkers[
+            key
+        ]
+    ) {
+
+
+        autoLayer.removeLayer(
+
+            candidateMarkers[
+                key
+            ]
+
+        );
+
+
+        delete candidateMarkers[
+            key
+        ];
+
+
+    }
+
+
+
+    item.status =
+        "rejected";
+
+
+
+    renderReviewTable();
+
+
+    updateStats();
+
+}
+
+
+
+// ============================================================
+// 22. ФОРМИРУЕМ ПОИСКОВУЮ СТРОКУ
+// ============================================================
+
+
+function buildSearchQuery(
+    stop
+) {
+
+
+    const name =
+
+        stop.name
+        .toLowerCase();
+
+
+
+    if (
+
+        name.includes(
+            "село"
+        ) ||
+
+        name.includes(
+            "талгар"
+        ) ||
+
+        name.includes(
+            "каскелен"
+        )
+
+    ) {
+
+
+        return (
+
+            stop.name +
+
+            ", Алматинская область, Казахстан"
+
+        );
+
+
+    }
+
+
+
+    return (
+
+        stop.name +
+
+        ", Алматы, Казахстан"
+
+    );
+
+}
+
+
+
+// ============================================================
+// 23. ГЕОКОДЕР
+// ============================================================
+
+
+async function geocodeStop(
+    stop
+) {
+
+
+    const query =
+        buildSearchQuery(
+            stop
+        );
+
+
+
+    const url =
+
+        "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates" +
+
+        "?SingleLine=" +
+
+        encodeURIComponent(
+            query
+        ) +
+
+        "&f=json" +
+
+        "&outFields=Match_addr" +
+
+        "&maxLocations=5";
+
+
+
+    try {
+
+
+        const response =
+            await fetch(
+                url
+            );
+
+
+
+        const data =
+            await response.json();
+
+
+
+        if (
+
+            !data.candidates ||
+
+            data.candidates.length ===
+            0
+
+        ) {
+
+
+            return null;
+
+
+        }
+
+
+
+        const candidate =
+
+            data.candidates.find(
+
+                function(item) {
+
+
+                    const lat =
+                        item.location.y;
+
+
+                    const lon =
+                        item.location.x;
+
+
+
+                    return (
+
+                        lat > 42.8 &&
+
+                        lat < 44.0 &&
+
+                        lon > 75.8 &&
+
+                        lon < 78.0
+
+                    );
+
+
+                }
+
+            );
+
+
+
+        if (!candidate) {
+
+
+            return null;
+
+
+        }
+
+
+
+        return {
+
+            lat:
+                candidate.location.y,
+
+            lon:
+                candidate.location.x,
+
+            score:
+                candidate.score,
+
+            address:
+                candidate.address
+
+        };
+
+
+    }
+
+
+    catch (
+        error
+    ) {
+
+
+        console.error(
+
+            "Ошибка поиска:",
+
+            stop.name,
+
+            error
+
+        );
+
+
+        return null;
+
+
+    }
+
+}
+
+
+
+// ============================================================
+// 24. ПАУЗА МЕЖДУ ЗАПРОСАМИ
+// ============================================================
+
+
+function sleep(ms) {
+
+
+    return new Promise(
+
+        function(resolve) {
+
+
+            setTimeout(
+
+                resolve,
+
+                ms
+
+            );
+
+
+        }
+
+    );
+
+}
+
+
+
+// ============================================================
+// 25. ПОИСК ВСЕХ ТОЧЕК БЕЗ КООРДИНАТ
+// ============================================================
+
+
+async function findMissingStops() {
+
+
+    for (
+        const stop of stops
+    ) {
+
+
+
+// ============================================================
+// ТОЧКА УЖЕ ЕСТЬ В STOPS.JS
+// ============================================================
+
+
+        if (
+
+            stop.lat !== null &&
+            stop.lon !== null
+
+        ) {
+
+
+            continue;
+
+
+        }
+
+
+
+        const key =
+            getStopKey(stop);
+
+
+
+// ============================================================
+// РАНЕЕ ПОДТВЕРЖДЕНА
+// ============================================================
+
+
+        const verifiedSaved =
+
+            localStorage.getItem(
+
+                "verified_" +
+                key
+
+            );
+
+
+
+        if (
+            verifiedSaved
+        ) {
+
+
+            const saved =
+
+                JSON.parse(
+                    verifiedSaved
+                );
+
+
+
+            stop.lat =
+                saved.lat;
+
+
+            stop.lon =
+                saved.lon;
+
+
+
+            drawStop(
+
+                stop,
+
+                false
+
+            );
+
+
+            updateStats();
+
+
+            continue;
+
+        }
+
+
+
+// ============================================================
+// РАНЕЕ ОТКЛОНЕНА
+// ============================================================
+
+
+        const rejectedSaved =
+
+            localStorage.getItem(
+
+                "rejected_" +
+                key
+
+            );
+
+
+
+        if (
+            rejectedSaved
+        ) {
+
+
+            continue;
+
+
+        }
+
+
+
+// ============================================================
+// ПРОВЕРЯЕМ КЭШ КАНДИДАТА
+// ============================================================
+
+
+        const cacheKey =
+
+            "candidate_" +
+            key;
+
+
+
+        const cached =
+
+            localStorage.getItem(
+                cacheKey
+            );
+
+
+
+        if (
+            cached
+        ) {
+
+
+            const result =
+
+                JSON.parse(
+                    cached
+                );
+
+
+
+            stop.lat =
+                result.lat;
+
+
+            stop.lon =
+                result.lon;
+
+
+
+            const marker =
+
+                drawStop(
+
+                    stop,
+
+                    true
+
+                );
+
+
+
+            candidateMarkers[
+                key
+            ] =
+                marker;
+
+
+
+            addReviewItem(
+
+                stop,
+
+                result
+
+            );
+
+
+            continue;
+
+        }
+
+
+
+// ============================================================
+// ИЩЕМ В ГЕОКОДЕРЕ
+// ============================================================
+
+
+        console.log(
+
+            "Ищу:",
+
+            stop.name
+
+        );
+
+
+
+        const result =
+
+            await geocodeStop(
+                stop
+            );
+
+
+
+        if (
+            !result
+        ) {
+
+
+            console.warn(
+
+                "Не найдено:",
+
+                stop.name
+
+            );
+
+
+            await sleep(
+                500
+            );
+
+
+            continue;
+
+        }
+
+
+
+// ============================================================
+// СЛАБОЕ СОВПАДЕНИЕ
+// ============================================================
+
+
+        if (
+            result.score <
+            70
+        ) {
+
+
+            console.warn(
+
+                "Слабое совпадение:",
+
+                stop.name,
+
+                result.score
+
+            );
+
+
+            await sleep(
+                500
+            );
+
+
+            continue;
+
+        }
+
+
+
+// ============================================================
+// СОХРАНЯЕМ КАНДИДАТА
+// ============================================================
+
+
+        stop.lat =
+            result.lat;
+
+
+        stop.lon =
+            result.lon;
+
+
+
+        localStorage.setItem(
+
+            cacheKey,
+
+            JSON.stringify(
+                result
+            )
+
+        );
+
+
+
+// ============================================================
+// РИСУЕМ КАНДИДАТА
+// ============================================================
+
+
+        const marker =
+
+            drawStop(
+
+                stop,
+
+                true
+
+            );
+
+
+
+        candidateMarkers[
+            key
+        ] =
+            marker;
+
+
+
+        addReviewItem(
+
+            stop,
+
+            result
+
+        );
+
+
+
+        await sleep(
+            500
+        );
+
+    }
+
+
+
+    updateStats();
+
+
+
+    console.log(
+
+        "Поиск координат завершён"
+
+    );
+
+}
+
+
+
+// ============================================================
+// 26. ЗАПУСК
+// ============================================================
+
+
+updateStats();
+
+
+findMissingStops();
+
+
+</script>
+
+
+</body>
+
+</html>
