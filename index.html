@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -344,6 +344,14 @@ button:disabled {
     border-radius: 14px;
     padding: 2px 6px;
     font-weight: bold;
+}
+
+/* Подписи не должны перехватывать тап по карте */
+.route-count-label,
+.turn-label,
+.turn-pending-label,
+.zone-label {
+    pointer-events: none !important;
 }
 
 .zone-label {
@@ -2097,29 +2105,7 @@ function renderZones() {
                 bubblingMouseEvents: false
             }
         ).addTo(zone.layer);
-
-        polygon.bindPopup(
-            "<b>" +
-            zone.name +
-            " — " +
-            zone.direction +
-            "</b>" +
-            "<br><br>Всего объектов: <b>" +
-            zone.total +
-            "</b>" +
-            "<br>🟢 Отстоев: <b>" +
-            zone.stops +
-            "</b>" +
-            "<br>🔄 Разворотов: <b>" +
-            zone.turns +
-            "</b>" +
-            "<br>⚪ Временных разворотов: <b>" +
-            zone.temporaryTurns +
-            "</b>" +
-            "<br><br><small>Предварительное распределение. " +
-            "Непроверенные развороты сейчас учитываются по временной точке; " +
-            "после их проверки зоны пересчитаются автоматически.</small>"
-        );
+        // У зон НЕТ popup: они только визуальный фон и не реагируют на тап.
 
         if (
             Number.isFinite(zone.center.lat) &&
@@ -3910,12 +3896,70 @@ function renderStopMarkers() {
             );
             marker.on(
                 "click",
-                function() {
+                function(event) {
+                    if (
+                        event &&
+                        event.originalEvent
+                    ) {
+                        L.DomEvent.stopPropagation(
+                            event.originalEvent
+                        );
+                    }
+
                     selectStop(
                         stop.id
                     );
                 }
             );
+
+            // Большая невидимая область нажатия для пальца.
+            // Она не меняет внешний размер точки.
+            if (window.innerWidth <= 900) {
+                const stopTouchTarget =
+                    L.circleMarker(
+                        [
+                            coordinates.lat,
+                            coordinates.lon
+                        ],
+                        {
+                            pane:
+                                "objectPane",
+                            radius:
+                                22,
+                            stroke:
+                                false,
+                            fill:
+                                true,
+                            fillOpacity:
+                                0.001,
+                            bubblingMouseEvents:
+                                false
+                        }
+                    )
+                    .addTo(
+                        layer
+                    );
+
+                stopTouchTarget.on(
+                    "click",
+                    function(event) {
+                        if (
+                            event &&
+                            event.originalEvent
+                        ) {
+                            L.DomEvent.stopPropagation(
+                                event.originalEvent
+                            );
+                        }
+
+                        marker.openPopup();
+
+                        selectStop(
+                            stop.id
+                        );
+                    }
+                );
+            }
         }
     );
 }
@@ -4088,12 +4132,69 @@ function renderTurnMarkers() {
             );
             marker.on(
                 "click",
-                function() {
+                function(event) {
+                    if (
+                        event &&
+                        event.originalEvent
+                    ) {
+                        L.DomEvent.stopPropagation(
+                            event.originalEvent
+                        );
+                    }
+
                     selectTurn(
                         turn.id
                     );
                 }
             );
+
+            // Большая невидимая область нажатия для разворота на телефоне.
+            if (window.innerWidth <= 900) {
+                const turnTouchTarget =
+                    L.circleMarker(
+                        [
+                            coordinates.lat,
+                            coordinates.lon
+                        ],
+                        {
+                            pane:
+                                "objectPane",
+                            radius:
+                                22,
+                            stroke:
+                                false,
+                            fill:
+                                true,
+                            fillOpacity:
+                                0.001,
+                            bubblingMouseEvents:
+                                false
+                        }
+                    )
+                    .addTo(
+                        layer
+                    );
+
+                turnTouchTarget.on(
+                    "click",
+                    function(event) {
+                        if (
+                            event &&
+                            event.originalEvent
+                        ) {
+                            L.DomEvent.stopPropagation(
+                                event.originalEvent
+                            );
+                        }
+
+                        marker.openPopup();
+
+                        selectTurn(
+                            turn.id
+                        );
+                    }
+                );
+            }
         }
     );
 }
