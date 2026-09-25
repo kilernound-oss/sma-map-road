@@ -1257,6 +1257,23 @@ L.tileLayer(
             "&copy; OpenStreetMap contributors"
     }
 ).addTo(map);
+
+// ============================================================
+// MAP PANES — ПРИОРИТЕТ КЛИКОВ
+// ============================================================
+// Цветные зоны всегда находятся НИЖЕ остановок/разворотов
+// и вообще не перехватывают нажатия мыши/пальца.
+map.createPane("zonePane");
+map.getPane("zonePane").style.zIndex = "250";
+map.getPane("zonePane").style.pointerEvents = "none";
+
+map.createPane("zoneLabelPane");
+map.getPane("zoneLabelPane").style.zIndex = "350";
+map.getPane("zoneLabelPane").style.pointerEvents = "none";
+
+// Отстои, развороты и новая проверяемая точка — выше зон.
+map.createPane("objectPane");
+map.getPane("objectPane").style.zIndex = "500";
 // ============================================================
 // LAYERS
 // ============================================================
@@ -2049,6 +2066,9 @@ function makeZoneLabelIcon(zone) {
 }
 
 function renderZones() {
+    // Зоны намеренно некликабельные:
+    // тап по точке внутри зоны всегда должен открывать
+    // отстой/разворот, а не информацию о зоне.
     ZONE_DEFINITIONS.forEach(function(definition) {
         definition.layer.clearLayers();
     });
@@ -2064,12 +2084,17 @@ function renderZones() {
         const polygon = L.polygon(
             zone.polygon,
             {
+                pane: "zonePane",
                 color: zone.color,
                 weight: 3,
                 opacity: 0.9,
                 fillColor: zone.color,
                 fillOpacity: 0.11,
-                interactive: true
+
+                // ВАЖНО:
+                // зона только визуальная и НЕ может перехватить тап.
+                interactive: false,
+                bubblingMouseEvents: false
             }
         ).addTo(zone.layer);
 
@@ -2103,8 +2128,10 @@ function renderZones() {
             L.marker(
                 [zone.center.lat, zone.center.lon],
                 {
+                    pane: "zoneLabelPane",
                     icon: makeZoneLabelIcon(zone),
-                    interactive: false
+                    interactive: false,
+                    keyboard: false
                 }
             ).addTo(zone.layer);
         }
@@ -3356,6 +3383,8 @@ function showCandidate() {
                 parsed.lon
             ],
             {
+                pane:
+                    "objectPane",
                 radius:
                     12,
                 color:
@@ -3365,7 +3394,9 @@ function showCandidate() {
                 fillColor:
                     "#ff8c00",
                 fillOpacity:
-                    1
+                    1,
+                bubblingMouseEvents:
+                    false
             }
         )
         .addTo(
@@ -3819,8 +3850,14 @@ function renderStopMarkers() {
                         coordinates.lon
                     ],
                     {
+                        pane: "objectPane",
+
+                        // На телефоне точку немного легче нажать.
                         radius:
-                            8,
+                            window.innerWidth <= 700
+                                ? 10
+                                : 8,
+
                         color:
                             "#ffffff",
                         weight:
@@ -3828,7 +3865,11 @@ function renderStopMarkers() {
                         fillColor:
                             color,
                         fillOpacity:
-                            1
+                            1,
+
+                        // Нажатие относится именно к отстою.
+                        bubblingMouseEvents:
+                            false
                     }
                 )
                 .addTo(
@@ -3946,10 +3987,21 @@ function renderTurnMarkers() {
                         coordinates.lon
                     ],
                     {
+                        pane: "objectPane",
+
                         radius:
-                            coordinates.temporary
-                                ? 7
-                                : 9,
+                            window.innerWidth <= 700
+                                ? (
+                                    coordinates.temporary
+                                        ? 9
+                                        : 11
+                                )
+                                : (
+                                    coordinates.temporary
+                                        ? 7
+                                        : 9
+                                ),
+
                         color:
                             "#ffffff",
                         weight:
@@ -3963,7 +4015,10 @@ function renderTurnMarkers() {
                         fillOpacity:
                             coordinates.temporary
                                 ? 0.55
-                                : 1
+                                : 1,
+
+                        bubblingMouseEvents:
+                            false
                     }
                 )
                 .addTo(
