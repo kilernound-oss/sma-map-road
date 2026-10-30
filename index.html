@@ -1327,7 +1327,7 @@ const ZONE_HUB = {
     lon: 76.87730
 };
 
-const ZONE_RAY_BEARINGS = [
+let ZONE_RAY_BEARINGS = [
     300,
     60,
     180
@@ -1827,7 +1827,7 @@ function getTurnDisplayCoordinates(turn) {
     };
 }
 // ============================================================
-// 3 ЗОНЫ ДЛЯ ИНЖЕНЕРОВ — СХЕМА "MERCEDES"
+// 3 СБАЛАНСИРОВАННЫЕ ЗОНЫ — СХЕМА "MERCEDES"
 //
 // Все объекты учитываются:
 // - все отстои;
@@ -1856,9 +1856,7 @@ const ZONE_DEFINITIONS = [
         shortDirection: "С",
         color: "#dc3545",
         layer: zone1Layer,
-        startBearing: 300,
-        endBearing: 420,
-        labelBearing: 0
+        idealCenterBearing: 0
     },
     {
         id: 2,
@@ -1867,9 +1865,7 @@ const ZONE_DEFINITIONS = [
         shortDirection: "ЮВ",
         color: "#126caa",
         layer: zone2Layer,
-        startBearing: 60,
-        endBearing: 180,
-        labelBearing: 120
+        idealCenterBearing: 120
     },
     {
         id: 3,
@@ -1878,9 +1874,7 @@ const ZONE_DEFINITIONS = [
         shortDirection: "ЮЗ",
         color: "#198754",
         layer: zone3Layer,
-        startBearing: 180,
-        endBearing: 300,
-        labelBearing: 240
+        idealCenterBearing: 240
     }
 ];
 
@@ -2120,32 +2114,57 @@ function bearingInsideSector(
     );
 }
 
-function getZoneForPoint(
-    lat,
-    lon
-) {
-    const bearing =
-        bearingFromHub(
-            lat,
-            lon
+function angularDistanceDegrees(a, b) {
+    let diff =
+        Math.abs(
+            normalizeBearing(a) -
+            normalizeBearing(b)
         );
 
-    for (
-        const zone of
-        ZONE_DEFINITIONS
-    ) {
-        if (
-            bearingInsideSector(
-                bearing,
-                zone.startBearing,
-                zone.endBearing
-            )
-        ) {
-            return zone.id;
-        }
+    if (diff > 180) {
+        diff =
+            360 - diff;
     }
 
-    return 1;
+    return diff;
+}
+
+function circularMidpointDegrees(a, b) {
+    let first =
+        normalizeBearing(a);
+
+    let second =
+        normalizeBearing(b);
+
+    if (second < first) {
+        second += 360;
+    }
+
+    return normalizeBearing(
+        first +
+        (second - first) / 2
+    );
+}
+
+function unwrapBearingFrom(
+    bearing,
+    startBearing
+) {
+    let value =
+        normalizeBearing(
+            bearing
+        );
+
+    const start =
+        normalizeBearing(
+            startBearing
+        );
+
+    while (value < start) {
+        value += 360;
+    }
+
+    return value;
 }
 
 function createSectorPolygon(
@@ -2160,11 +2179,21 @@ function createSectorPolygon(
         ]
     ];
 
-    const stepDegrees = 4;
+    let start =
+        Number(startBearing);
+
+    let end =
+        Number(endBearing);
+
+    while (end <= start) {
+        end += 360;
+    }
+
+    const stepDegrees = 3;
 
     for (
-        let bearing = startBearing;
-        bearing <= endBearing;
+        let bearing = start;
+        bearing <= end;
         bearing += stepDegrees
     ) {
         const point =
@@ -2181,12 +2210,11 @@ function createSectorPolygon(
         ]);
     }
 
-    // Гарантируем точную последнюю точку сектора.
     const lastPoint =
         destinationPoint(
             ZONE_HUB.lat,
             ZONE_HUB.lon,
-            endBearing,
+            end,
             radiusKm
         );
 
@@ -2203,38 +2231,345 @@ function createSectorPolygon(
     return points;
 }
 
-function calculateThreeSectorZones() {
+// ============================================================
+// БАЛАНСИРОВКА 3 ЗОН
+//
+// ВАЖНО:
+// Мы больше НЕ делим карту на фиксированные 120°.
+//
+// 1. Считаем направление каждого объекта от центра ADK.
+// 2. Сортируем объекты по кругу.
+// 3. Делим последовательность на 3 почти равные части.
+// 4. Перебираем точку начала и выбираем вариант,
+//    который одновременно:
+//    - даёт максимально равное число объектов;
+//    - сохраняет общий вид "Mercedes":
+//      красная зона сверху,
+//      синяя справа снизу,
+//      зелёная слева снизу.
+//
+// При 294 объектах получится 98 / 98 / 98.
+// ============================================================
+
+function calculateBalancedThreeSectorZones() {
     const objects =
         collectObjectsForZones();
 
-    if (!objects.length) {
+    if (objects.length < 3) {
+        return null;
+    }
+
+    const items =
+        objects
+        .map(
+            function(item) {
+                return {
+                    ...item,
+                    bearing:
+                        bearingFromHub(
+                            item.lat,
+                            item.lon
+                        )
+                };
+            }
+        )
+        .sort(
+            function(a, b) {
+                return (
+                    a.bearing -
+                    b.bearing
+                );
+            }
+        );
+
+    const total =
+        items.length;
+
+    const baseSize =
+        Math.floor(
+            total / 3
+        );
+
+    const remainder =
+        total % 3;
+
+    // Например:
+    // 294 -> 98 / 98 / 98
+    // 295 -> 99 / 98 / 98
+    const sizes = [
+        baseSize +
+        (
+            remainder > 0
+                ? 1
+                : 0
+        ),
+        baseSize +
+        (
+            remainder > 1
+                ? 1
+                : 0
+        ),
+        baseSize
+    ];
+
+    function cyclicItem(index) {
+        const wrapped =
+            (
+                index % total +
+                total
+            ) %
+            total;
+
+        return items[
+            wrapped
+        ];
+    }
+
+    function groupForStart(
+        startIndex,
+        groupIndex
+    ) {
+        const offset =
+            sizes
+            .slice(
+                0,
+                groupIndex
+            )
+            .reduce(
+                (
+                    sum,
+                    value
+                ) =>
+                    sum + value,
+                0
+            );
+
+        const count =
+            sizes[
+                groupIndex
+            ];
+
+        const group = [];
+
+        for (
+            let i = 0;
+            i < count;
+            i++
+        ) {
+            group.push(
+                cyclicItem(
+                    startIndex +
+                    offset +
+                    i
+                )
+            );
+        }
+
+        return group;
+    }
+
+    function circularMeanBearing(
+        group
+    ) {
+        if (!group.length) {
+            return 0;
+        }
+
+        let x = 0;
+        let y = 0;
+
+        group.forEach(
+            function(item) {
+                const angle =
+                    toRadians(
+                        item.bearing
+                    );
+
+                x +=
+                    Math.sin(
+                        angle
+                    );
+
+                y +=
+                    Math.cos(
+                        angle
+                    );
+            }
+        );
+
+        return normalizeBearing(
+            toDegrees(
+                Math.atan2(
+                    x,
+                    y
+                )
+            )
+        );
+    }
+
+    let best = null;
+
+    // Перебираем возможное начало первого сектора.
+    // Так зоны остаются географически цельными.
+    for (
+        let startIndex = 0;
+        startIndex < total;
+        startIndex++
+    ) {
+        const candidateGroups = [
+            groupForStart(
+                startIndex,
+                0
+            ),
+            groupForStart(
+                startIndex,
+                1
+            ),
+            groupForStart(
+                startIndex,
+                2
+            )
+        ];
+
+        const means =
+            candidateGroups.map(
+                circularMeanBearing
+            );
+
+        // Хотим сохранить визуальную ориентацию:
+        // красная ≈ север,
+        // синяя ≈ юго-восток,
+        // зелёная ≈ юго-запад.
+        const orientationScore =
+            Math.pow(
+                angularDistanceDegrees(
+                    means[0],
+                    0
+                ),
+                2
+            )
+            +
+            Math.pow(
+                angularDistanceDegrees(
+                    means[1],
+                    120
+                ),
+                2
+            )
+            +
+            Math.pow(
+                angularDistanceDegrees(
+                    means[2],
+                    240
+                ),
+                2
+            );
+
+        if (
+            !best ||
+            orientationScore <
+                best.score
+        ) {
+            best = {
+                startIndex:
+                    startIndex,
+                groups:
+                    candidateGroups,
+                means:
+                    means,
+                score:
+                    orientationScore
+            };
+        }
+    }
+
+    if (!best) {
         return null;
     }
 
     const groups = {
-        1: [],
-        2: [],
-        3: []
+        1:
+            best.groups[0],
+        2:
+            best.groups[1],
+        3:
+            best.groups[2]
     };
+
+    // Граница ставится МЕЖДУ соседними точками,
+    // а не прямо через объект.
+    const firstStart =
+        best.startIndex;
+
+    const secondStart =
+        firstStart +
+        sizes[0];
+
+    const thirdStart =
+        secondStart +
+        sizes[1];
+
+    const boundary1 =
+        circularMidpointDegrees(
+            cyclicItem(
+                firstStart - 1
+            ).bearing,
+            cyclicItem(
+                firstStart
+            ).bearing
+        );
+
+    const boundary2 =
+        circularMidpointDegrees(
+            cyclicItem(
+                secondStart - 1
+            ).bearing,
+            cyclicItem(
+                secondStart
+            ).bearing
+        );
+
+    const boundary3 =
+        circularMidpointDegrees(
+            cyclicItem(
+                thirdStart - 1
+            ).bearing,
+            cyclicItem(
+                thirdStart
+            ).bearing
+        );
+
+    // Лучи теперь динамические и соответствуют
+    // фактическим границам равных по нагрузке зон.
+    ZONE_RAY_BEARINGS = [
+        boundary1,
+        boundary2,
+        boundary3
+    ];
 
     zoneAssignments =
         new Map();
 
-    objects.forEach(function(item) {
-        const zoneId =
-            getZoneForPoint(
-                item.lat,
-                item.lon
+    Object.entries(
+        groups
+    )
+    .forEach(
+        function(
+            [
+                zoneId,
+                group
+            ]
+        ) {
+            group.forEach(
+                function(item) {
+                    zoneAssignments.set(
+                        item.id,
+                        Number(zoneId)
+                    );
+                }
             );
-
-        groups[zoneId]
-            .push(item);
-
-        zoneAssignments.set(
-            item.id,
-            zoneId
-        );
-    });
+        }
+    );
 
     const maxDistanceKm =
         Math.max(
@@ -2251,48 +2586,101 @@ function calculateThreeSectorZones() {
             )
         );
 
-    // Добавляем запас, чтобы сектора гарантированно
-    // покрывали все крайние объекты.
     const sectorRadiusKm =
         Math.max(
             maxDistanceKm * 1.12,
             15
         );
 
+    // Разворачиваем границы в последовательность:
+    // b1 -> b2 -> b3 -> b1+360
+    let b1 =
+        normalizeBearing(
+            boundary1
+        );
+
+    let b2 =
+        unwrapBearingFrom(
+            boundary2,
+            b1
+        );
+
+    let b3 =
+        unwrapBearingFrom(
+            boundary3,
+            b2
+        );
+
+    let b4 =
+        b1 + 360;
+
+    while (b4 <= b3) {
+        b4 += 360;
+    }
+
+    const sectorBounds = [
+        [b1, b2],
+        [b2, b3],
+        [b3, b4]
+    ];
+
     zoneSummary =
         ZONE_DEFINITIONS.map(
-            function(definition) {
-                const items =
+            function(
+                definition,
+                index
+            ) {
+                const group =
                     groups[
                         definition.id
                     ] || [];
 
                 const stopsCount =
-                    items.filter(
+                    group.filter(
                         item =>
                             item.type ===
                             "stop"
                     ).length;
 
                 const turnsCount =
-                    items.filter(
+                    group.filter(
                         item =>
                             item.type ===
                             "turn"
                     ).length;
 
                 const temporaryTurnsCount =
-                    items.filter(
+                    group.filter(
                         item =>
                             item.type ===
                             "turn" &&
                             item.temporary
                     ).length;
 
+                const startBearing =
+                    sectorBounds[
+                        index
+                    ][0];
+
+                const endBearing =
+                    sectorBounds[
+                        index
+                    ][1];
+
+                const centerBearing =
+                    normalizeBearing(
+                        startBearing +
+                        (
+                            endBearing -
+                            startBearing
+                        ) / 2
+                    );
+
                 const labelDistanceKm =
                     Math.min(
                         Math.max(
-                            sectorRadiusKm * 0.18,
+                            sectorRadiusKm *
+                            0.18,
                             2
                         ),
                         10
@@ -2302,29 +2690,36 @@ function calculateThreeSectorZones() {
                     destinationPoint(
                         ZONE_HUB.lat,
                         ZONE_HUB.lon,
-                        definition.labelBearing,
+                        centerBearing,
                         labelDistanceKm
                     );
 
                 return {
                     ...definition,
-                    items,
+                    items:
+                        group,
                     total:
-                        items.length,
+                        group.length,
                     stops:
                         stopsCount,
                     turns:
                         turnsCount,
                     temporaryTurns:
                         temporaryTurnsCount,
+                    startBearing:
+                        startBearing,
+                    endBearing:
+                        endBearing,
+                    centerBearing:
+                        centerBearing,
                     center:
                         labelPoint,
                     radiusKm:
                         sectorRadiusKm,
                     polygon:
                         createSectorPolygon(
-                            definition.startBearing,
-                            definition.endBearing,
+                            startBearing,
+                            endBearing,
                             sectorRadiusKm
                         )
                 };
@@ -2341,6 +2736,11 @@ function calculateThreeSectorZones() {
         {
             ...ZONE_HUB
         };
+
+    window.smaZoneRayBearings =
+        [
+            ...ZONE_RAY_BEARINGS
+        ];
 
     return zoneSummary;
 }
@@ -2462,7 +2862,7 @@ function renderZones() {
     zoneBoundaryLayer.clearLayers();
 
     const zones =
-        calculateThreeSectorZones();
+        calculateBalancedThreeSectorZones();
 
     if (!zones) {
         updateZoneSummaryControl([]);
@@ -2609,7 +3009,8 @@ function updateZoneSummaryControl(
             }
         ).join("") +
         '<div style="margin-top:5px;color:#64748b">' +
-        'формат: всего (отстои + развороты)' +
+        'формат: всего (отстои + развороты)<br>' +
+        'границы автоматически балансируются по количеству объектов' +
         '</div>';
 }
 
