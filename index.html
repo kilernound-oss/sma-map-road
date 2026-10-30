@@ -355,7 +355,7 @@ button:disabled {
 }
 
 .zone-label {
-    min-width: 88px;
+    min-width: 96px;
     padding: 5px 8px;
     border-radius: 8px;
     color: white;
@@ -1301,12 +1301,37 @@ const turnPendingLayer =
     L.layerGroup();
 
 // ============================================================
-// 4 РАБОЧИЕ ЗОНЫ ИНЖЕНЕРОВ
+// 3 РАБОЧИЕ ЗОНЫ ИНЖЕНЕРОВ — СХЕМА "MERCEDES"
+// ============================================================
+// Три сектора выходят из одной центральной точки:
+// ↖ северо-западный луч
+// ↗ северо-восточный луч
+// ↓ южный луч
+//
+// Центр выбран рядом с ADK / ул. Сатпаева.
+// Если позже захочешь чуть сдвинуть центр — меняй только
+// ZONE_HUB.lat и ZONE_HUB.lon.
+//
+// Лучи стоят через 120°:
+// 300° = северо-запад
+//  60° = северо-восток
+// 180° = юг
 // ============================================================
 const zone1Layer = L.layerGroup();
 const zone2Layer = L.layerGroup();
 const zone3Layer = L.layerGroup();
-const zone4Layer = L.layerGroup();
+const zoneBoundaryLayer = L.layerGroup();
+
+const ZONE_HUB = {
+    lat: 43.23327,
+    lon: 76.87730
+};
+
+const ZONE_RAY_BEARINGS = [
+    300,
+    60,
+    180
+];
 
 const candidateLayer =
     L.layerGroup()
@@ -1321,10 +1346,10 @@ const layerControl = L.control.layers(
         "✅ Развороты — проверено": turnVerifiedLayer,
         "🔴 Развороты — проблема": turnProblemLayer,
         "⚪ Развороты — без координат": turnPendingLayer,
-        "🔴 Зона 1 — СЗ": zone1Layer,
-        "🔵 Зона 2 — СВ": zone2Layer,
-        "🟢 Зона 3 — ЮЗ": zone3Layer,
-        "🟡 Зона 4 — ЮВ": zone4Layer,
+        "🔴 Зона 1 — СЕВЕР": zone1Layer,
+        "🔵 Зона 2 — ЮГО-ВОСТОК": zone2Layer,
+        "🟢 Зона 3 — ЮГО-ЗАПАД": zone3Layer,
+        "⚫ Границы 3 зон": zoneBoundaryLayer,
         "🟠 Новая точка": candidateLayer
     },
     {
@@ -1351,7 +1376,7 @@ window.smaLayerControl = layerControl;
     zone1Layer,
     zone2Layer,
     zone3Layer,
-    zone4Layer
+    zoneBoundaryLayer
 ].forEach(function(layer) {
     if (!map.hasLayer(layer)) {
         layer.addTo(map);
@@ -1802,37 +1827,49 @@ function getTurnDisplayCoordinates(turn) {
     };
 }
 // ============================================================
-// 4 ЗОНЫ ДЛЯ ИНЖЕНЕРОВ
+// 3 ЗОНЫ ДЛЯ ИНЖЕНЕРОВ — СХЕМА "MERCEDES"
 //
-// Сейчас учитываем ВСЕ объекты:
+// Все объекты учитываются:
 // - все отстои;
 // - все развороты;
-// - непроверенные развороты тоже входят в нагрузку;
-// - если у разворота пока нет реальной координаты,
-//   используется его СЕРАЯ временная точка только для
-//   предварительного распределения нагрузки.
+// - непроверенные развороты тоже входят;
+// - временные серые точки разворотов участвуют только
+//   в предварительном распределении.
 //
-// После проверки разворотов зоны пересчитаются автоматически.
-// Позже, когда координаты будут финальными, границы можно
-// зафиксировать и уже распределить 12 инженеров по зонам.
+// Деление теперь НЕ прямоугольное.
+// Все зоны выходят из одной точки ZONE_HUB.
+// Границы — три луча через 120°.
+//
+// Зона 1: верхний сектор.
+// Зона 2: правый нижний сектор.
+// Зона 3: левый нижний сектор.
+//
+// При проверке реальных разворотов принадлежность к сектору
+// автоматически пересчитается по настоящей координате.
 // ============================================================
 
 const ZONE_DEFINITIONS = [
     {
         id: 1,
         name: "Зона 1",
-        direction: "Северо-запад",
-        shortDirection: "СЗ",
+        direction: "Север",
+        shortDirection: "С",
         color: "#dc3545",
-        layer: zone1Layer
+        layer: zone1Layer,
+        startBearing: 300,
+        endBearing: 420,
+        labelBearing: 0
     },
     {
         id: 2,
         name: "Зона 2",
-        direction: "Северо-восток",
-        shortDirection: "СВ",
+        direction: "Юго-восток",
+        shortDirection: "ЮВ",
         color: "#126caa",
-        layer: zone2Layer
+        layer: zone2Layer,
+        startBearing: 60,
+        endBearing: 180,
+        labelBearing: 120
     },
     {
         id: 3,
@@ -1840,15 +1877,10 @@ const ZONE_DEFINITIONS = [
         direction: "Юго-запад",
         shortDirection: "ЮЗ",
         color: "#198754",
-        layer: zone3Layer
-    },
-    {
-        id: 4,
-        name: "Зона 4",
-        direction: "Юго-восток",
-        shortDirection: "ЮВ",
-        color: "#d59b00",
-        layer: zone4Layer
+        layer: zone3Layer,
+        startBearing: 180,
+        endBearing: 300,
+        labelBearing: 240
     }
 ];
 
@@ -1899,160 +1931,416 @@ function collectObjectsForZones() {
     });
 }
 
-function midpointBetween(a, b) {
-    if (!Number.isFinite(a) || !Number.isFinite(b)) {
-        return null;
-    }
+// ============================================================
+// ГЕОГРАФИЯ СЕКТОРОВ
+// ============================================================
 
-    return (a + b) / 2;
+function toRadians(value) {
+    return value * Math.PI / 180;
 }
 
-function splitBalanced(items, field) {
-    const sorted = [...items].sort(function(a, b) {
-        return a[field] - b[field];
-    });
+function toDegrees(value) {
+    return value * 180 / Math.PI;
+}
 
-    const splitIndex = Math.floor(sorted.length / 2);
+function normalizeBearing(value) {
+    return (
+        (Number(value) % 360) +
+        360
+    ) % 360;
+}
+
+function distanceKm(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+    const earthRadiusKm = 6371;
+
+    const dLat =
+        toRadians(
+            lat2 - lat1
+        );
+
+    const dLon =
+        toRadians(
+            lon2 - lon1
+        );
+
+    const a =
+        Math.sin(dLat / 2) *
+        Math.sin(dLat / 2)
+        +
+        Math.cos(
+            toRadians(lat1)
+        )
+        *
+        Math.cos(
+            toRadians(lat2)
+        )
+        *
+        Math.sin(dLon / 2)
+        *
+        Math.sin(dLon / 2);
+
+    const c =
+        2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        );
+
+    return earthRadiusKm * c;
+}
+
+function bearingFromHub(
+    lat,
+    lon
+) {
+    const lat1 =
+        toRadians(
+            ZONE_HUB.lat
+        );
+
+    const lat2 =
+        toRadians(
+            lat
+        );
+
+    const dLon =
+        toRadians(
+            lon - ZONE_HUB.lon
+        );
+
+    const y =
+        Math.sin(dLon) *
+        Math.cos(lat2);
+
+    const x =
+        Math.cos(lat1) *
+        Math.sin(lat2)
+        -
+        Math.sin(lat1) *
+        Math.cos(lat2) *
+        Math.cos(dLon);
+
+    return normalizeBearing(
+        toDegrees(
+            Math.atan2(y, x)
+        )
+    );
+}
+
+function destinationPoint(
+    lat,
+    lon,
+    bearing,
+    distance
+) {
+    const earthRadiusKm = 6371;
+
+    const angularDistance =
+        distance /
+        earthRadiusKm;
+
+    const brng =
+        toRadians(
+            normalizeBearing(bearing)
+        );
+
+    const lat1 =
+        toRadians(lat);
+
+    const lon1 =
+        toRadians(lon);
+
+    const lat2 =
+        Math.asin(
+            Math.sin(lat1) *
+            Math.cos(angularDistance)
+            +
+            Math.cos(lat1) *
+            Math.sin(angularDistance) *
+            Math.cos(brng)
+        );
+
+    const lon2 =
+        lon1
+        +
+        Math.atan2(
+            Math.sin(brng) *
+            Math.sin(angularDistance) *
+            Math.cos(lat1),
+            Math.cos(angularDistance)
+            -
+            Math.sin(lat1) *
+            Math.sin(lat2)
+        );
 
     return {
-        low: sorted.slice(0, splitIndex),
-        high: sorted.slice(splitIndex)
+        lat:
+            toDegrees(lat2),
+        lon:
+            toDegrees(lon2)
     };
 }
 
-function calculateBalancedZones() {
-    const objects = collectObjectsForZones();
+function bearingInsideSector(
+    bearing,
+    startBearing,
+    endBearing
+) {
+    let b =
+        normalizeBearing(
+            bearing
+        );
 
-    if (objects.length < 4) {
-        return null;
+    const start =
+        normalizeBearing(
+            startBearing
+        );
+
+    let end =
+        Number(
+            endBearing
+        );
+
+    if (end <= start) {
+        end += 360;
     }
 
-    // 1) Делим весь объём примерно пополам запад / восток.
-    const westEast = splitBalanced(objects, "lon");
-    const west = westEast.low;
-    const east = westEast.high;
-
-    if (!west.length || !east.length) {
-        return null;
+    if (b < start) {
+        b += 360;
     }
 
-    // 2) Каждую половину делим примерно пополам юг / север.
-    // В итоге получаем 4 географически цельные зоны
-    // с максимально близким количеством объектов.
-    const westSouthNorth = splitBalanced(west, "lat");
-    const eastSouthNorth = splitBalanced(east, "lat");
+    return (
+        b >= start &&
+        b < end
+    );
+}
+
+function getZoneForPoint(
+    lat,
+    lon
+) {
+    const bearing =
+        bearingFromHub(
+            lat,
+            lon
+        );
+
+    for (
+        const zone of
+        ZONE_DEFINITIONS
+    ) {
+        if (
+            bearingInsideSector(
+                bearing,
+                zone.startBearing,
+                zone.endBearing
+            )
+        ) {
+            return zone.id;
+        }
+    }
+
+    return 1;
+}
+
+function createSectorPolygon(
+    startBearing,
+    endBearing,
+    radiusKm
+) {
+    const points = [
+        [
+            ZONE_HUB.lat,
+            ZONE_HUB.lon
+        ]
+    ];
+
+    const stepDegrees = 4;
+
+    for (
+        let bearing = startBearing;
+        bearing <= endBearing;
+        bearing += stepDegrees
+    ) {
+        const point =
+            destinationPoint(
+                ZONE_HUB.lat,
+                ZONE_HUB.lon,
+                bearing,
+                radiusKm
+            );
+
+        points.push([
+            point.lat,
+            point.lon
+        ]);
+    }
+
+    // Гарантируем точную последнюю точку сектора.
+    const lastPoint =
+        destinationPoint(
+            ZONE_HUB.lat,
+            ZONE_HUB.lon,
+            endBearing,
+            radiusKm
+        );
+
+    points.push([
+        lastPoint.lat,
+        lastPoint.lon
+    ]);
+
+    points.push([
+        ZONE_HUB.lat,
+        ZONE_HUB.lon
+    ]);
+
+    return points;
+}
+
+function calculateThreeSectorZones() {
+    const objects =
+        collectObjectsForZones();
+
+    if (!objects.length) {
+        return null;
+    }
 
     const groups = {
-        1: westSouthNorth.high, // северо-запад
-        2: eastSouthNorth.high, // северо-восток
-        3: westSouthNorth.low,  // юго-запад
-        4: eastSouthNorth.low   // юго-восток
+        1: [],
+        2: [],
+        3: []
     };
 
-    const westMaxLon = Math.max(...west.map(item => item.lon));
-    const eastMinLon = Math.min(...east.map(item => item.lon));
-    const xSplit = midpointBetween(westMaxLon, eastMinLon);
+    zoneAssignments =
+        new Map();
 
-    const westSouth = groups[3];
-    const westNorth = groups[1];
-    const eastSouth = groups[4];
-    const eastNorth = groups[2];
+    objects.forEach(function(item) {
+        const zoneId =
+            getZoneForPoint(
+                item.lat,
+                item.lon
+            );
 
-    const westSouthMaxLat = Math.max(...westSouth.map(item => item.lat));
-    const westNorthMinLat = Math.min(...westNorth.map(item => item.lat));
-    const eastSouthMaxLat = Math.max(...eastSouth.map(item => item.lat));
-    const eastNorthMinLat = Math.min(...eastNorth.map(item => item.lat));
+        groups[zoneId]
+            .push(item);
 
-    const yWestSplit = midpointBetween(
-        westSouthMaxLat,
-        westNorthMinLat
-    );
-
-    const yEastSplit = midpointBetween(
-        eastSouthMaxLat,
-        eastNorthMinLat
-    );
-
-    const minLat = Math.min(...objects.map(item => item.lat));
-    const maxLat = Math.max(...objects.map(item => item.lat));
-    const minLon = Math.min(...objects.map(item => item.lon));
-    const maxLon = Math.max(...objects.map(item => item.lon));
-
-    // Небольшой запас, чтобы полигоны не обрезали крайние точки.
-    const latPadding = Math.max((maxLat - minLat) * 0.04, 0.006);
-    const lonPadding = Math.max((maxLon - minLon) * 0.04, 0.008);
-
-    const south = minLat - latPadding;
-    const north = maxLat + latPadding;
-    const westEdge = minLon - lonPadding;
-    const eastEdge = maxLon + lonPadding;
-
-    const polygons = {
-        1: [
-            [yWestSplit, westEdge],
-            [north, westEdge],
-            [north, xSplit],
-            [yWestSplit, xSplit]
-        ],
-        2: [
-            [yEastSplit, xSplit],
-            [north, xSplit],
-            [north, eastEdge],
-            [yEastSplit, eastEdge]
-        ],
-        3: [
-            [south, westEdge],
-            [yWestSplit, westEdge],
-            [yWestSplit, xSplit],
-            [south, xSplit]
-        ],
-        4: [
-            [south, xSplit],
-            [yEastSplit, xSplit],
-            [yEastSplit, eastEdge],
-            [south, eastEdge]
-        ]
-    };
-
-    zoneAssignments = new Map();
-
-    Object.entries(groups).forEach(function([zoneId, items]) {
-        items.forEach(function(item) {
-            zoneAssignments.set(item.id, Number(zoneId));
-        });
+        zoneAssignments.set(
+            item.id,
+            zoneId
+        );
     });
 
-    zoneSummary = ZONE_DEFINITIONS.map(function(definition) {
-        const items = groups[definition.id] || [];
-        const stopsCount = items.filter(item => item.type === "stop").length;
-        const turnsCount = items.filter(item => item.type === "turn").length;
-        const temporaryTurnsCount = items.filter(
-            item => item.type === "turn" && item.temporary
-        ).length;
+    const maxDistanceKm =
+        Math.max(
+            1,
+            ...objects.map(
+                function(item) {
+                    return distanceKm(
+                        ZONE_HUB.lat,
+                        ZONE_HUB.lon,
+                        item.lat,
+                        item.lon
+                    );
+                }
+            )
+        );
 
-        const center = {
-            lat:
-                items.reduce((sum, item) => sum + item.lat, 0) /
-                Math.max(items.length, 1),
-            lon:
-                items.reduce((sum, item) => sum + item.lon, 0) /
-                Math.max(items.length, 1)
+    // Добавляем запас, чтобы сектора гарантированно
+    // покрывали все крайние объекты.
+    const sectorRadiusKm =
+        Math.max(
+            maxDistanceKm * 1.12,
+            15
+        );
+
+    zoneSummary =
+        ZONE_DEFINITIONS.map(
+            function(definition) {
+                const items =
+                    groups[
+                        definition.id
+                    ] || [];
+
+                const stopsCount =
+                    items.filter(
+                        item =>
+                            item.type ===
+                            "stop"
+                    ).length;
+
+                const turnsCount =
+                    items.filter(
+                        item =>
+                            item.type ===
+                            "turn"
+                    ).length;
+
+                const temporaryTurnsCount =
+                    items.filter(
+                        item =>
+                            item.type ===
+                            "turn" &&
+                            item.temporary
+                    ).length;
+
+                const labelDistanceKm =
+                    Math.min(
+                        Math.max(
+                            sectorRadiusKm * 0.18,
+                            2
+                        ),
+                        10
+                    );
+
+                const labelPoint =
+                    destinationPoint(
+                        ZONE_HUB.lat,
+                        ZONE_HUB.lon,
+                        definition.labelBearing,
+                        labelDistanceKm
+                    );
+
+                return {
+                    ...definition,
+                    items,
+                    total:
+                        items.length,
+                    stops:
+                        stopsCount,
+                    turns:
+                        turnsCount,
+                    temporaryTurns:
+                        temporaryTurnsCount,
+                    center:
+                        labelPoint,
+                    radiusKm:
+                        sectorRadiusKm,
+                    polygon:
+                        createSectorPolygon(
+                            definition.startBearing,
+                            definition.endBearing,
+                            sectorRadiusKm
+                        )
+                };
+            }
+        );
+
+    window.smaZoneAssignments =
+        zoneAssignments;
+
+    window.smaZoneSummary =
+        zoneSummary;
+
+    window.smaZoneHub =
+        {
+            ...ZONE_HUB
         };
-
-        return {
-            ...definition,
-            items,
-            total: items.length,
-            stops: stopsCount,
-            turns: turnsCount,
-            temporaryTurns: temporaryTurnsCount,
-            center,
-            polygon: polygons[definition.id]
-        };
-    });
-
-    window.smaZoneAssignments = zoneAssignments;
-    window.smaZoneSummary = zoneSummary;
 
     return zoneSummary;
 }
@@ -2066,22 +2354,115 @@ function makeZoneLabelIcon(zone) {
             '">' +
             zone.name.toUpperCase() +
             '<br>' +
+            zone.direction +
+            '<br>' +
             zone.total +
             ' объектов</div>',
-        iconSize: [105, 44],
-        iconAnchor: [52, 22]
+        iconSize: [115, 58],
+        iconAnchor: [57, 29]
     });
 }
 
-function renderZones() {
-    // Зоны намеренно некликабельные:
-    // тап по точке внутри зоны всегда должен открывать
-    // отстой/разворот, а не информацию о зоне.
-    ZONE_DEFINITIONS.forEach(function(definition) {
-        definition.layer.clearLayers();
-    });
+function renderZoneBoundaries(radiusKm) {
+    zoneBoundaryLayer.clearLayers();
 
-    const zones = calculateBalancedZones();
+    ZONE_RAY_BEARINGS.forEach(
+        function(bearing) {
+            const end =
+                destinationPoint(
+                    ZONE_HUB.lat,
+                    ZONE_HUB.lon,
+                    bearing,
+                    radiusKm
+                );
+
+            // Белая подложка делает границу читаемой
+            // на любой подложке карты.
+            L.polyline(
+                [
+                    [
+                        ZONE_HUB.lat,
+                        ZONE_HUB.lon
+                    ],
+                    [
+                        end.lat,
+                        end.lon
+                    ]
+                ],
+                {
+                    pane: "zonePane",
+                    color: "#ffffff",
+                    weight: 7,
+                    opacity: 0.95,
+                    interactive: false
+                }
+            ).addTo(
+                zoneBoundaryLayer
+            );
+
+            L.polyline(
+                [
+                    [
+                        ZONE_HUB.lat,
+                        ZONE_HUB.lon
+                    ],
+                    [
+                        end.lat,
+                        end.lon
+                    ]
+                ],
+                {
+                    pane: "zonePane",
+                    color: "#111827",
+                    weight: 3,
+                    opacity: 0.95,
+                    interactive: false
+                }
+            ).addTo(
+                zoneBoundaryLayer
+            );
+        }
+    );
+
+    // Центральная точка — как центр эмблемы Mercedes.
+    L.circleMarker(
+        [
+            ZONE_HUB.lat,
+            ZONE_HUB.lon
+        ],
+        {
+            pane: "zoneLabelPane",
+            radius: 8,
+            color: "#111827",
+            weight: 3,
+            fillColor: "#ffffff",
+            fillOpacity: 1,
+            interactive: false
+        }
+    )
+    .bindTooltip(
+        "Центр 3 зон",
+        {
+            permanent: false,
+            direction: "top"
+        }
+    )
+    .addTo(
+        zoneBoundaryLayer
+    );
+}
+
+function renderZones() {
+    ZONE_DEFINITIONS.forEach(
+        function(definition) {
+            definition.layer.clearLayers();
+        }
+    );
+
+    zoneBoundaryLayer.clearLayers();
+
+    const zones =
+        calculateThreeSectorZones();
 
     if (!zones) {
         updateZoneSummaryControl([]);
@@ -2089,102 +2470,144 @@ function renderZones() {
     }
 
     zones.forEach(function(zone) {
-        const polygon = L.polygon(
+        L.polygon(
             zone.polygon,
             {
                 pane: "zonePane",
                 color: zone.color,
-                weight: 3,
-                opacity: 0.9,
+                weight: 1.5,
+                opacity: 0.75,
                 fillColor: zone.color,
-                fillOpacity: 0.11,
-
-                // ВАЖНО:
-                // зона только визуальная и НЕ может перехватить тап.
+                fillOpacity: 0.10,
                 interactive: false,
                 bubblingMouseEvents: false
             }
-        ).addTo(zone.layer);
-        // У зон НЕТ popup: они только визуальный фон и не реагируют на тап.
+        ).addTo(
+            zone.layer
+        );
 
         if (
-            Number.isFinite(zone.center.lat) &&
-            Number.isFinite(zone.center.lon)
+            Number.isFinite(
+                zone.center.lat
+            ) &&
+            Number.isFinite(
+                zone.center.lon
+            )
         ) {
             L.marker(
-                [zone.center.lat, zone.center.lon],
+                [
+                    zone.center.lat,
+                    zone.center.lon
+                ],
                 {
-                    pane: "zoneLabelPane",
-                    icon: makeZoneLabelIcon(zone),
-                    interactive: false,
-                    keyboard: false
+                    pane:
+                        "zoneLabelPane",
+                    icon:
+                        makeZoneLabelIcon(
+                            zone
+                        ),
+                    interactive:
+                        false,
+                    keyboard:
+                        false
                 }
-            ).addTo(zone.layer);
+            ).addTo(
+                zone.layer
+            );
         }
     });
 
-    updateZoneSummaryControl(zones);
+    renderZoneBoundaries(
+        zones[0].radiusKm
+    );
+
+    updateZoneSummaryControl(
+        zones
+    );
 }
 
 // ============================================================
-// КРАТКАЯ СТАТИСТИКА 4 ЗОН НА КАРТЕ
+// КРАТКАЯ СТАТИСТИКА 3 ЗОН НА КАРТЕ
 // ============================================================
-const zoneSummaryControl = L.control({
-    position: "bottomright"
-});
+const zoneSummaryControl =
+    L.control({
+        position:
+            "bottomright"
+    });
 
-zoneSummaryControl.onAdd = function() {
-    const div = L.DomUtil.create(
-        "div",
-        "zone-summary-control"
-    );
+zoneSummaryControl.onAdd =
+    function() {
+        const div =
+            L.DomUtil.create(
+                "div",
+                "zone-summary-control"
+            );
 
-    div.id = "zoneSummaryControl";
+        div.id =
+            "zoneSummaryControl";
 
-    L.DomEvent.disableClickPropagation(div);
-    L.DomEvent.disableScrollPropagation(div);
+        L.DomEvent
+            .disableClickPropagation(
+                div
+            );
 
-    return div;
-};
+        L.DomEvent
+            .disableScrollPropagation(
+                div
+            );
 
-zoneSummaryControl.addTo(map);
+        return div;
+    };
 
-function updateZoneSummaryControl(zones) {
-    const container = document.getElementById(
-        "zoneSummaryControl"
-    );
+zoneSummaryControl.addTo(
+    map
+);
+
+function updateZoneSummaryControl(
+    zones
+) {
+    const container =
+        document.getElementById(
+            "zoneSummaryControl"
+        );
 
     if (!container) {
         return;
     }
 
-    if (!zones || !zones.length) {
+    if (
+        !zones ||
+        !zones.length
+    ) {
         container.innerHTML =
-            '<div class="zone-summary-title">👷 4 зоны инженеров</div>' +
+            '<div class="zone-summary-title">👷 3 зоны инженеров</div>' +
             '<div>Нет данных для расчёта.</div>';
+
         return;
     }
 
     container.innerHTML =
-        '<div class="zone-summary-title">👷 4 зоны инженеров</div>' +
-        zones.map(function(zone) {
-            return (
-                '<div class="zone-summary-row">' +
-                '<span style="font-weight:bold;color:' +
-                zone.color +
-                '">● ' +
-                zone.name +
-                '</span>' +
-                '<span>' +
-                zone.total +
-                ' (' +
-                zone.stops +
-                ' + ' +
-                zone.turns +
-                ')</span>' +
-                '</div>'
-            );
-        }).join("") +
+        '<div class="zone-summary-title">👷 3 зоны инженеров</div>' +
+        zones.map(
+            function(zone) {
+                return (
+                    '<div class="zone-summary-row">' +
+                    '<span style="font-weight:bold;color:' +
+                    zone.color +
+                    '">● ' +
+                    zone.name +
+                    '</span>' +
+                    '<span>' +
+                    zone.total +
+                    ' (' +
+                    zone.stops +
+                    ' + ' +
+                    zone.turns +
+                    ')</span>' +
+                    '</div>'
+                );
+            }
+        ).join("") +
         '<div style="margin-top:5px;color:#64748b">' +
         'формат: всего (отстои + развороты)' +
         '</div>';
